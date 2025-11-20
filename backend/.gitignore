@@ -38,3 +38,6 @@ htmlcov/
 # Environment variables
 .env
 .env.local
+
+# Uploaded files
+uploads/

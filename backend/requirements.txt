@@ -9,8 +9,10 @@ uvicorn[standard]==0.24.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
-# CORS Support
+# File Handling & CORS Support
 python-multipart==0.0.6
+aiofiles==23.2.1
+pillow==10.4.0
 
 # Optional: Database support (for future use)
 # sqlalchemy==2.0.23

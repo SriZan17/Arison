@@ -24,6 +24,14 @@ class ProjectStatus(str, Enum):
     DISPUTED = "Disputed"
 
 
+class ReviewType(str, Enum):
+    PROGRESS_UPDATE = "Progress Update"
+    QUALITY_ISSUE = "Quality Issue"
+    COMPLETION_VERIFICATION = "Completion Verification"
+    DELAY_REPORT = "Delay Report"
+    FRAUD_ALERT = "Fraud Alert"
+
+
 class TenderDocuments(BaseModel):
     prepared_date: Optional[str] = None
     approved_date: Optional[str] = None
@@ -89,6 +97,35 @@ class CitizenReport(BaseModel):
     geolocation: Optional[dict] = None
     timestamp: str
     verified: bool = False
+
+
+class CitizenReview(BaseModel):
+    """Enhanced citizen review with work completion status"""
+    reporter_name: Optional[str] = Field(None, description="Name of the reporter (optional for anonymous reports)")
+    reporter_contact: Optional[str] = Field(None, description="Contact number or email (optional)")
+    review_type: ReviewType = Field(..., description="Type of review being submitted")
+    review_text: str = Field(..., min_length=10, description="Detailed review text (minimum 10 characters)")
+    work_completed: bool = Field(..., description="Is the work completed according to official status?")
+    quality_rating: Optional[int] = Field(None, ge=1, le=5, description="Quality rating from 1-5 (if applicable)")
+    geolocation: Optional[dict] = Field(None, description="GPS coordinates {lat, lng}")
+    
+
+class ImageUploadResponse(BaseModel):
+    """Response model for image upload"""
+    filename: str
+    file_path: str
+    file_size: int
+    upload_timestamp: str
+    message: str
+
+
+class ReviewSubmissionResponse(BaseModel):
+    """Response model for review submission"""
+    review_id: str
+    project_id: str
+    message: str
+    review: dict
+    uploaded_images: List[str]
 
 
 class ProcurementFilter(BaseModel):
