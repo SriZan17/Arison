@@ -3,9 +3,7 @@ import { Platform } from 'react-native';
 import { speechToText, TranscriptionResult } from './speechService';
 
 // Base URL for the RAG API
-const RAG_API_BASE_URL = Platform.OS === 'android' 
-  ? 'http://10.0.2.2:8080' 
-  : 'http://localhost:8080';
+const RAG_API_BASE_URL = 'http://192.168.88.191:8000'
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
