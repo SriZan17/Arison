@@ -7,7 +7,10 @@ import {
   RefreshControl,
   TouchableOpacity,
   Alert,
+  StatusBar,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -113,12 +116,19 @@ const HomeScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+      <StatusBar 
+        barStyle="light-content" 
+        backgroundColor={theme.colors.primary} 
+        translucent={Platform.OS === 'android'}
+      />
+      <ScrollView 
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.header}>
         <Text style={styles.welcomeText}>Welcome to</Text>
         <Text style={styles.titleText}>CMD Transparency Portal</Text>
@@ -224,10 +234,15 @@ const HomeScreen: React.FC = () => {
         </Card>
       )}
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

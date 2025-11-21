@@ -1,7 +1,9 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
@@ -10,7 +12,6 @@ import ProjectDetailScreen from '../screens/ProjectDetailScreen';
 import ReviewSubmissionScreen from '../screens/ReviewSubmissionScreen';
 import MapViewScreen from '../screens/MapViewScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreenSimple';
-import ProfileScreen from '../screens/ProfileScreenSimple';
 
 import { theme } from '../styles/theme';
 
@@ -25,13 +26,14 @@ export type MainTabParamList = {
   Projects: undefined;
   Map: undefined;
   Analytics: undefined;
-  Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const MainTabNavigator: React.FC = () => {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -51,9 +53,6 @@ const MainTabNavigator: React.FC = () => {
             case 'Analytics':
               iconName = focused ? 'stats-chart' : 'stats-chart-outline';
               break;
-            case 'Profile':
-              iconName = focused ? 'person' : 'person-outline';
-              break;
             default:
               iconName = 'home-outline';
           }
@@ -66,8 +65,10 @@ const MainTabNavigator: React.FC = () => {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
           paddingTop: 8,
-          paddingBottom: 8,
-          height: 60,
+          paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 8) : 12,
+          height: Platform.OS === 'ios' ? 60 + Math.max(insets.bottom, 0) : 70,
+          paddingHorizontal: 16,
+          borderTopWidth: 1,
         },
         headerStyle: {
           backgroundColor: theme.colors.primary,
@@ -75,6 +76,9 @@ const MainTabNavigator: React.FC = () => {
         headerTintColor: theme.colors.surface,
         headerTitleStyle: {
           fontWeight: 'bold',
+        },
+        headerSafeAreaInsets: {
+          top: insets.top,
         },
       })}
     >
@@ -98,16 +102,13 @@ const MainTabNavigator: React.FC = () => {
         component={AnalyticsScreen}
         options={{ title: 'Analytics' }}
       />
-      <Tab.Screen 
-        name="Profile" 
-        component={ProfileScreen}
-        options={{ title: 'Profile' }}
-      />
     </Tab.Navigator>
   );
 };
 
 const AppNavigator: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Stack.Navigator
       screenOptions={{
@@ -117,6 +118,9 @@ const AppNavigator: React.FC = () => {
         headerTintColor: theme.colors.surface,
         headerTitleStyle: {
           fontWeight: 'bold',
+        },
+        headerSafeAreaInsets: {
+          top: insets.top,
         },
       }}
     >

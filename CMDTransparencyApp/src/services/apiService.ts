@@ -194,22 +194,25 @@ export const reviewsApi = {
       return photoUrl;
     }
     
-    // If it's a relative path, construct the full URL
+    // Convert Windows backslashes to forward slashes for URLs
+    const normalizedPath = photoUrl.replace(/\\/g, '/');
+    
+    // Get the base URL
     const baseUrl = getApiBaseUrl();
     
     // Handle different possible formats
-    if (photoUrl.startsWith('/')) {
-      // Already starts with slash (e.g., "/backend/uploads/filename.jpg")
-      return `${baseUrl}${photoUrl}`;
-    } else if (photoUrl.includes('backend/uploads/')) {
+    if (normalizedPath.startsWith('/')) {
+      // Already starts with slash
+      return `${baseUrl}${normalizedPath}`;
+    } else if (normalizedPath.startsWith('uploads/')) {
+      // Path like "uploads/reviews/filename.jpg" - this matches your backend format
+      return `${baseUrl}/${normalizedPath}`;
+    } else if (normalizedPath.includes('backend/uploads/')) {
       // Path like "backend/uploads/filename.jpg"
-      return `${baseUrl}/${photoUrl}`;
-    } else if (photoUrl.includes('uploads/')) {
-      // Path like "uploads/filename.jpg" - add backend prefix
-      return `${baseUrl}/backend/${photoUrl}`;
+      return `${baseUrl}/${normalizedPath}`;
     } else {
       // Just filename - construct full path
-      return `${baseUrl}/backend/uploads/${photoUrl}`;
+      return `${baseUrl}/uploads/reviews/${normalizedPath}`;
     }
   },
 };
