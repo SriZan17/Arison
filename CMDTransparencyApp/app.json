@@ -18,8 +18,8 @@
         "NSLocationWhenInUseUsageDescription": "This app needs access to location to show nearby government projects and enable location-based reporting.",
         "NSCameraUsageDescription": "This app needs access to camera to capture photos for project reports.",
         "NSPhotoLibraryUsageDescription": "This app needs access to photo library to select images for project reports.",
-        "NSMicrophoneUsageDescription": "This app needs access to microphone for voice messages to i-maan AI assistant.",
-        "NSSpeechRecognitionUsageDescription": "This app needs access to speech recognition for voice commands to i-maan AI assistant."
+        "NSMicrophoneUsageDescription": "This app needs access to microphone for voice messages to e-maan AI assistant.",
+        "NSSpeechRecognitionUsageDescription": "This app needs access to speech recognition for voice commands to e-maan AI assistant."
       }
     },
     "android": {
@@ -57,7 +57,7 @@
       [
         "expo-av",
         {
-          "microphonePermission": "Allow CMD Transparency App to access microphone for voice messages to i-maan AI assistant."
+          "microphonePermission": "Allow CMD Transparency App to access microphone for voice messages to e-maan AI assistant."
         }
       ]
     ]

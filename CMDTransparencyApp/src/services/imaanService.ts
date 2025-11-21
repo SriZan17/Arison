@@ -45,7 +45,7 @@ class IMaanApiService {
       const response = await axios.post(`${this.baseURL}/chatbot`, {
         messages
       }, {
-        timeout: 30000,
+        timeout: 60000, // Increased to 60 seconds for longer AI responses
         headers: {
           'Content-Type': 'application/json',
         },

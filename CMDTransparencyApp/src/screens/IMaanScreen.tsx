@@ -15,9 +15,17 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Components
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import VoiceRecordButton from '../components/common/VoiceRecordButton';
 
 // Services
 import { imaanApi } from '../services/imaanService';
+import { initializeWhisperService } from '../services/whisperService';
+
+// Hooks
+import { useVoiceRecording } from '../hooks/useVoiceRecording';
+
+// Config
+import config from '../config/appConfig';
 
 // Types and Theme
 import { theme } from '../styles/theme';
@@ -39,7 +47,7 @@ const IMaanScreen: React.FC = () => {
     {
       id: '1',
       role: 'assistant',
-      content: 'नमस्ते! म i-maan हुँ। म तपाईंलाई सरकारी परियोजनाहरू र पारदर्शिताका बारेमा जानकारी दिन सक्छु। के तपाईंसँग कुनै प्रश्न छ?',
+      content: 'नमस्ते! म e-maan हुँ। म तपाईंलाई सरकारी परियोजनाहरू र पारदर्शिताका बारेमा जानकारी दिन सक्छु। के तपाईंसँग कुनै प्रश्न छ?',
       timestamp: new Date(),
     }
   ]);
@@ -47,12 +55,32 @@ const IMaanScreen: React.FC = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const textInputRef = useRef<TextInput>(null);
 
+  // Voice recording hook with Whisper transcription
+  const {
+    isRecording,
+    isTranscribing,
+    recognizedText,
+    audioUri,
+    recordingAnimation,
+    toggleRecording,
+    clearRecording,
+  } = useVoiceRecording((text: string) => {
+    setInputText(text);
+  });
+
+  useEffect(() => {
+    // Initialize Whisper service
+    try {
+      initializeWhisperService(config.openai.apiKey);
+    } catch (error) {
+      console.error('Failed to initialize Whisper service:', error);
+    }
+  }, []);
+
   useEffect(() => {
     // Auto-scroll to bottom when new messages are added
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
-
-
 
   const sendTextMessage = async (text?: string) => {
     const messageText = text || inputText.trim();
@@ -61,6 +89,7 @@ const IMaanScreen: React.FC = () => {
     try {
       setIsSending(true);
       setInputText(''); // Clear input
+      clearRecording(); // Clear voice recording
 
       // Add user message
       const userMessage: ChatMessage = {
@@ -87,7 +116,27 @@ const IMaanScreen: React.FC = () => {
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error sending text message:', error);
-      Alert.alert('Error', 'Failed to send message. Please try again.');
+      
+      let errorMessage = 'सन्देश पठाउन असफल। कृपया पुनः प्रयास गर्नुहोस्।';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('timeout') || error.message.includes('ECONNABORTED')) {
+          errorMessage = 'समय सकियो। AI ले जवाफ दिन लामो समय लगायो। कृपया छोटो प्रश्न सोध्नुहोस् र पुनः प्रयास गर्नुहोस्।';
+        } else if (error.message.includes('Network Error') || error.message.includes('ECONNREFUSED')) {
+          errorMessage = 'इन्टरनेट जडान जाँच गर्नुहोस् र पुनः प्रयास गर्नुहोस्।';
+        } else if (error.message.includes('500')) {
+          errorMessage = 'सर्भरमा समस्या छ। कृपया केही समयपछि प्रयास गर्नुहोस्।';
+        }
+      }
+      
+      Alert.alert(
+        'त्रुटि',
+        errorMessage,
+        [
+          { text: 'पुनः प्रयास', onPress: () => sendTextMessage(messageText) },
+          { text: 'रद्द गर्नुहोस्', style: 'cancel' }
+        ]
+      );
     } finally {
       setIsSending(false);
     }
@@ -114,14 +163,14 @@ const IMaanScreen: React.FC = () => {
             <View style={styles.statusIndicator} />
           </View>
           <View style={styles.headerText}>
-            <Text style={styles.title}>i-maan</Text>
+            <Text style={styles.title}>e-maan</Text>
             <Text style={styles.subtitle}>AI असिस्टेन्ट • सरकारी पारदर्शिता</Text>
           </View>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity 
             style={styles.infoButton}
-            onPress={() => Alert.alert('i-maan', 'AI असिस्टेन्ट सरकारी पारदर्शिताको लागि')}
+            onPress={() => Alert.alert('e-maan', 'AI असिस्टेन्ट सरकारी पारदर्शिताको लागि')}
           >
             <Ionicons name="information-circle" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
@@ -158,7 +207,7 @@ const IMaanScreen: React.FC = () => {
                   styles.messageRole,
                   message.role === 'user' ? styles.userMessageRole : styles.assistantMessageRole
                 ]}>
-                  {message.role === 'user' ? 'तपाईं' : 'i-maan'}
+                  {message.role === 'user' ? 'तपाईं' : 'e-maan'}
                 </Text>
                 <Text style={[
                   styles.messageTime,
@@ -222,6 +271,16 @@ const IMaanScreen: React.FC = () => {
               blurOnSubmit={false}
             />
 
+            <VoiceRecordButton
+              isRecording={isRecording}
+              isTranscribing={isTranscribing}
+              recordingAnimation={recordingAnimation}
+              onPress={toggleRecording}
+              disabled={isSending}
+              style={styles.voiceButtonStyle}
+              audioUri={audioUri}
+            />
+
             <TouchableOpacity
               style={[
                 styles.sendButton,
@@ -239,7 +298,11 @@ const IMaanScreen: React.FC = () => {
           </View>
           
           <Text style={styles.helpText}>
-            💬 नेपाली वा अङ्ग्रेजीमा प्रश्न सोध्नुहोस् • ❓ सहयोग माग्नुहोस्
+            💬 नेपाली वा अङ्ग्रेजीमा प्रश्न सोध्नुहोस् • 🎤 आवाज रेकर्ड गर्नुहोस् • ❓ सहयोग माग्नुहोस्
+            {isRecording && '\n🔴 रेकर्डिङ... बोल्नुहोस्'}
+            {isTranscribing && '\n⏳ AI ले तपाईंको आवाज बुझ्दै छ...'}
+            {isSending && '\n🤖 AI ले जवाफ तयार गर्दै छ... (यो केही सेकेन्डदेखि १ मिनेट सम्म लाग्न सक्छ)'}
+            {recognizedText && `\n✓ पहिचान भयो: "${recognizedText.substring(0, 50)}${recognizedText.length > 50 ? '...' : ''}"`}
           </Text>
         </View>
       </View>
@@ -482,6 +545,9 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     paddingVertical: theme.spacing.xs,
     textAlignVertical: 'center',
+  },
+  voiceButtonStyle: {
+    marginLeft: theme.spacing.sm,
   },
   sendButton: {
     width: 32,
