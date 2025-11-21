@@ -1,6 +1,6 @@
 import os
 import json
-
+import torch
 import openai
 import torch
 from dotenv import load_dotenv
@@ -12,6 +12,15 @@ from langchain_chroma import Chroma
 # -------------------------------------------------------------------
 # FastAPI setup
 # -------------------------------------------------------------------
+def resolve_device():
+    """Return the best available torch device for embeddings."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return "cuda"
+    except Exception:
+        pass
+    return "cpu"
 
 load_dotenv()
 
@@ -58,14 +67,14 @@ def get_rag_retriever():
         )
 
     # Use same embedding model/config as ingestion
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"[RAG] Using device for embeddings: {device}")
-
+    device = resolve_device()
+    print(f"Embedding model device: {device}")
     embedding = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-mpnet-base-v2",
-        model_kwargs={"device": device},
+        model_name="BAAI/bge-m3",
+        encode_kwargs={"normalize_embeddings": True},
+        model_kwargs={"device": device}
     )
-
+    
     rag_vectorstore = Chroma(
         persist_directory=RAG_PERSIST_DIR,
         embedding_function=embedding,

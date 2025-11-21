@@ -197,7 +197,25 @@ const ProjectDetailScreen: React.FC = () => {
               <InfoRow label="Fiscal Year" value={project.fiscal_year} icon="calendar-outline" />
               <InfoRow label="Project Type" value={project.procurement_plan.project_type} icon="construct-outline" />
               <InfoRow label="Status" value={project.status} />
-              <InfoRow label="Progress" value={`${project.progress_percentage}%`} icon="trending-up-outline" />
+              <View style={styles.progressRow}>
+                <View style={styles.progressRowContent}>
+                  <Ionicons name="trending-up-outline" size={20} color={theme.colors.primary} style={styles.infoIcon} />
+                  <View style={styles.progressContainer}>
+                    <Text style={styles.progressLabelText}>Progress</Text>
+                    <View style={styles.progressBarContainer}>
+                      <View style={styles.progressBar}>
+                        <View 
+                          style={[
+                            styles.progressFill, 
+                            { width: `${project.progress_percentage}%` }
+                          ]} 
+                        />
+                      </View>
+                      <Text style={styles.progressText}>{project.progress_percentage}%</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
             </Card>
 
             {/* Procurement Details */}
@@ -244,7 +262,7 @@ const ProjectDetailScreen: React.FC = () => {
             <Card style={styles.section}>
               <View style={styles.progressHeader}>
                 <ProgressCircle 
-                  percentage={project.progress_percentage} 
+                  progress={project.progress_percentage} 
                   size={120}
                   strokeWidth={12}
                 />
@@ -431,7 +449,15 @@ const ProjectDetailScreen: React.FC = () => {
           <View style={styles.headerMeta}>
             <StatusBadge status={project.status} />
             <View style={styles.progressBadge}>
-              <Text style={styles.progressBadgeText}>{project.progress_percentage}% Complete</Text>
+              <Text style={styles.progressBadgeText}>{project.progress_percentage}%</Text>
+              <View style={styles.progressBadgeBar}>
+                <View 
+                  style={[
+                    styles.progressBadgeFill, 
+                    { width: `${project.progress_percentage}%` }
+                  ]} 
+                />
+              </View>
             </View>
           </View>
         </Card>
@@ -557,15 +583,32 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   progressBadge: {
-    backgroundColor: theme.colors.primary + '15',
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    minWidth: 100,
+    alignItems: 'center',
   },
   progressBadgeText: {
-    fontSize: theme.typography.caption.fontSize,
+    fontSize: theme.typography.h4.fontSize,
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: '700',
+    marginBottom: theme.spacing.xs,
+  },
+  progressBadgeBar: {
+    width: 60,
+    height: 4,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.borderRadius.full,
+    overflow: 'hidden',
+  },
+  progressBadgeFill: {
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.full,
   },
   tabBar: {
     flexDirection: 'row',
@@ -860,6 +903,51 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  // Progress visualization styles
+  progressRow: {
+    marginBottom: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  progressRowContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  progressContainer: {
+    flex: 1,
+  },
+  progressLabelText: {
+    fontSize: theme.typography.caption.fontSize,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+  },
+  progressBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  progressBar: {
+    flex: 1,
+    height: 8,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.borderRadius.full,
+    marginRight: theme.spacing.sm,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.full,
+    minWidth: 2,
+  },
+  progressText: {
+    fontSize: theme.typography.body.fontSize,
+    color: theme.colors.text,
+    fontWeight: '600',
+    minWidth: 40,
+    textAlign: 'right',
   },
 });
 

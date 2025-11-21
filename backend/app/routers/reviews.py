@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 from typing import List, Optional
 import os
@@ -11,8 +11,10 @@ from app.models.schemas import (
     ReviewType,
     ImageUploadResponse,
     ReviewSubmissionResponse,
+    User,
 )
 from app.database.service import DatabaseService
+from app.auth.dependencies import get_current_user_optional, get_current_active_user
 
 router = APIRouter(prefix="/api/reviews", tags=["reviews"])
 
@@ -128,6 +130,7 @@ async def submit_review_with_images(
     latitude: Optional[float] = Form(None),
     longitude: Optional[float] = Form(None),
     images: List[UploadFile] = File(default=[]),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Submit a complete citizen review with optional images.
@@ -181,6 +184,12 @@ async def submit_review_with_images(
 
     # Generate unique review ID
     review_id = f"REV-{uuid.uuid4().hex[:8].upper()}"
+
+    # If user is authenticated, use their information
+    if current_user:
+        reporter_name = reporter_name or current_user.name
+        if not reporter_contact and current_user.phone:
+            reporter_contact = current_user.phone
 
     # Create review in database
     review = await DatabaseService.create_citizen_report(
@@ -308,12 +317,33 @@ async def get_project_review_summary(project_id: str):
     }
 
 
-@router.delete("/image/{filename}")
-async def delete_review_image(filename: str):
+@router.get("/my-reviews")
+async def get_my_reviews(current_user: User = Depends(get_current_active_user)):
     """
-    Delete an uploaded review image.
+    Get all reviews submitted by the current authenticated user
+    """
+    try:
+        # In a real app, this would query the database by user_id
+        # For now, we'll return a placeholder response
+        return {
+            "user_id": current_user.id,
+            "user_name": current_user.name,
+            "total_reviews": 0,
+            "reviews": [],
+            "message": "Your submitted reviews will appear here",
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error fetching user reviews: {str(e)}"
+        )
 
-    (In production, this should have authentication and authorization)
+
+@router.delete("/image/{filename}")
+async def delete_review_image(
+    filename: str, current_user: User = Depends(get_current_active_user)
+):
+    """
+    Delete an uploaded review image (authenticated users only).
     """
     file_path = UPLOAD_DIR / filename
 
@@ -322,6 +352,9 @@ async def delete_review_image(filename: str):
 
     try:
         os.remove(file_path)
-        return {"message": f"Image {filename} deleted successfully"}
+        return {
+            "message": f"Image {filename} deleted successfully",
+            "deleted_by": current_user.name,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")

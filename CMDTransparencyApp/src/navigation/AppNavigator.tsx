@@ -14,6 +14,12 @@ import MapViewScreen from '../screens/MapViewScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreenSimple';
 import IMaanScreen from '../screens/IMaanScreen';
 
+// Navigation
+import AuthNavigator from './AuthNavigator';
+
+// Context
+import { useAuth } from '../context/AuthContext';
+
 import { theme } from '../styles/theme';
 
 export type RootStackParamList = {
@@ -90,7 +96,7 @@ const MainTabNavigator: React.FC = () => {
       <Tab.Screen 
         name="Home" 
         component={HomeScreen}
-        options={{ title: 'CMD Transparency' }}
+        options={{ title: 'E-निरीक्षण' }}
       />
       <Tab.Screen 
         name="Projects" 
@@ -118,7 +124,19 @@ const MainTabNavigator: React.FC = () => {
 
 const AppNavigator: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const { user, loading } = useAuth();
+
+  // Show loading screen while checking authentication status
+  if (loading) {
+    return null; // Could return a splash screen component here
+  }
+
+  // Show auth navigator if user is not authenticated
+  if (!user) {
+    return <AuthNavigator />;
+  }
   
+  // Show main app if user is authenticated
   return (
     <Stack.Navigator
       screenOptions={{
@@ -128,9 +146,6 @@ const AppNavigator: React.FC = () => {
         headerTintColor: theme.colors.surface,
         headerTitleStyle: {
           fontWeight: 'bold',
-        },
-        headerSafeAreaInsets: {
-          top: insets.top,
         },
       }}
     >

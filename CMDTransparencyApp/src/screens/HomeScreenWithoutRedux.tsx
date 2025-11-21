@@ -145,7 +145,7 @@ const HomeScreen: React.FC = () => {
     >
       <View style={styles.header}>
         <Text style={styles.welcomeText}>Welcome to</Text>
-        <Text style={styles.titleText}>CMD Transparency Portal</Text>
+        <Text style={styles.titleText}>E-निरीक्षण</Text>
         <Text style={styles.subtitleText}>
           Monitor government procurement projects and contribute to transparency
         </Text>

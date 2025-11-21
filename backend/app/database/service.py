@@ -1,5 +1,5 @@
 """
-Database service layer for CMD Transparency Platform
+Database service layer for E-निरीक्षण Platform
 Handles all database operations using async/await pattern
 """
 
