@@ -113,7 +113,6 @@ def main():
         print("No new or updated PDFs. Using existing vector store only.")
 
     # 2. Initialize embeddings and (possibly existing) vector store
-    # ✅ HuggingFace embeddings instead of OpenAIEmbeddings
     embedding = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-mpnet-base-v2"
     )
@@ -139,7 +138,7 @@ def main():
 
             print("Adding new chunks to vector store...")
             vectorstore.add_documents(splits)
-            vectorstore.persist()
+            # ✅ NO vectorstore.persist() here – persistence is automatic
 
             # Update state file now that indexing succeeded
             save_pdf_state(state_file, updated_state)
@@ -158,24 +157,6 @@ def main():
 
     print("\nRAG System Ready! Type 'exit' to quit.\n")
 
-    while True:
-        query = input("Enter your question: ")
-        if query.lower() in ['exit', 'quit', 'q']:
-            break
-
-        if not query.strip():
-            continue
-
-        try:
-            result = qa_chain.invoke({"query": query})
-            print("\n--- Answer ---")
-            print(result['result'])
-            print("\n--- Sources ---")
-            for doc in result['source_documents']:
-                print(f"- {doc.metadata.get('source', 'Unknown')}, Page {doc.metadata.get('page', 'Unknown')}")
-            print("\n" + "-" * 30 + "\n")
-        except Exception as e:
-            print(f"Error processing query: {e}")
 
 
 if __name__ == "__main__":
