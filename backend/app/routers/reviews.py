@@ -12,7 +12,7 @@ from app.models.schemas import (
     ImageUploadResponse,
     ReviewSubmissionResponse,
 )
-from app.data.mock_data import get_project_by_id, mock_projects
+from app.database.service import DatabaseService
 
 router = APIRouter(prefix="/api/reviews", tags=["reviews"])
 
@@ -147,7 +147,7 @@ async def submit_review_with_images(
     - images: Up to 5 images (optional)
     """
     # Verify project exists
-    project = get_project_by_id(project_id)
+    project = await DatabaseService.get_project_by_id(project_id)
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
@@ -182,23 +182,19 @@ async def submit_review_with_images(
     # Generate unique review ID
     review_id = f"REV-{uuid.uuid4().hex[:8].upper()}"
 
-    # Create review object
-    review = {
-        "review_id": review_id,
-        "reporter_name": reporter_name or "Anonymous",
-        "reporter_contact": reporter_contact,
-        "review_type": review_type.value,
-        "review_text": review_text,
-        "work_completed": work_completed,
-        "quality_rating": quality_rating,
-        "geolocation": geolocation,
-        "photo_urls": uploaded_image_paths,
-        "timestamp": datetime.now().isoformat(),
-        "verified": False,
-    }
-
-    # Add review to project (in-memory for demo)
-    project["citizen_reports"].append(review)
+    # Create review in database
+    review = await DatabaseService.create_citizen_report(
+        review_id=review_id,
+        project_id=project_id,
+        reporter_name=reporter_name or "Anonymous",
+        reporter_contact=reporter_contact,
+        review_type=review_type.value,
+        review_text=review_text,
+        work_completed=work_completed,
+        quality_rating=quality_rating,
+        geolocation=geolocation,
+        photo_urls=uploaded_image_paths,
+    )
 
     return ReviewSubmissionResponse(
         review_id=review_id,
@@ -224,6 +220,35 @@ async def get_review_image(filename: str):
     return FileResponse(file_path)
 
 
+@router.get("/{project_id}/review/{review_id}")
+async def get_specific_review(project_id: str, review_id: str):
+    """
+    Get a specific review by review_id for a project.
+
+    Returns detailed information about a single citizen review including
+    all associated images and metadata.
+    """
+    # Verify project exists
+    project = await DatabaseService.get_project_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
+
+    # Get the specific review
+    review = await DatabaseService.get_specific_review(project_id, review_id)
+
+    if not review:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Review {review_id} not found for project {project_id}",
+        )
+
+    return {
+        "project_id": project_id,
+        "project_name": project["procurement_plan"]["details_of_work"],
+        "review": review,
+    }
+
+
 @router.get("/{project_id}/all")
 async def get_all_reviews(project_id: str):
     """
@@ -231,16 +256,18 @@ async def get_all_reviews(project_id: str):
 
     Returns reviews with image URLs that can be accessed via /api/reviews/image/{filename}
     """
-    project = get_project_by_id(project_id)
+    project = await DatabaseService.get_project_by_id(project_id)
 
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
+    reviews = await DatabaseService.get_project_reports(project_id)
+
     return {
         "project_id": project_id,
         "project_name": project["procurement_plan"]["details_of_work"],
-        "total_reviews": len(project.get("citizen_reports", [])),
-        "reviews": project.get("citizen_reports", []),
+        "total_reviews": len(reviews),
+        "reviews": reviews,
     }
 
 
@@ -255,39 +282,29 @@ async def get_project_review_summary(project_id: str):
     - Average quality rating
     - Review type breakdown
     """
-    project = get_project_by_id(project_id)
+    project = await DatabaseService.get_project_by_id(project_id)
 
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
-    reviews = project.get("citizen_reports", [])
+    stats = await DatabaseService.get_project_statistics(project_id)
 
-    if not reviews:
+    if stats["total_reviews"] == 0:
         return {
             "project_id": project_id,
             "total_reviews": 0,
             "message": "No reviews yet for this project",
         }
 
-    # Calculate statistics
-    completed_count = sum(1 for r in reviews if r.get("work_completed", False))
-    ratings = [r.get("quality_rating") for r in reviews if r.get("quality_rating")]
-    avg_rating = sum(ratings) / len(ratings) if ratings else None
-
-    review_types = {}
-    for review in reviews:
-        rtype = review.get("review_type", "Unknown")
-        review_types[rtype] = review_types.get(rtype, 0) + 1
-
     return {
         "project_id": project_id,
         "project_name": project["procurement_plan"]["details_of_work"],
-        "total_reviews": len(reviews),
-        "work_completed_percentage": round((completed_count / len(reviews)) * 100, 2),
-        "average_quality_rating": round(avg_rating, 2) if avg_rating else None,
-        "review_type_breakdown": review_types,
-        "reviews_with_images": sum(1 for r in reviews if r.get("photo_urls")),
-        "verified_reviews": sum(1 for r in reviews if r.get("verified", False)),
+        "total_reviews": stats["total_reviews"],
+        "work_completed_percentage": stats["work_completed_percentage"],
+        "average_quality_rating": stats["average_quality_rating"],
+        "review_type_breakdown": stats["review_type_breakdown"],
+        "reviews_with_images": stats["reviews_with_images"],
+        "verified_reviews": stats["verified_reviews"],
     }
 
 

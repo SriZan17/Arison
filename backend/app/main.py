@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.routers import projects, reviews
+from app.database.config import connect_db, disconnect_db
 from pathlib import Path
 
 # Initialize FastAPI app
@@ -12,6 +13,20 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+
+# Database event handlers
+@app.on_event("startup")
+async def startup():
+    """Connect to database on startup"""
+    await connect_db()
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    """Disconnect from database on shutdown"""
+    await disconnect_db()
+
 
 # Configure CORS - Allow frontend to access the API
 app.add_middleware(

@@ -1,0 +1,741 @@
+{
+    "info": {
+        "_postman_id": "cmd-transparency-api-collection",
+        "name": "CMD Transparency API",
+        "description": "Comprehensive API collection for testing CMD Transparency Government Procurement Platform endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "cmd-transparency"
+    },
+    "item": [
+        {
+            "name": "Health & Info",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/health",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        },
+                        "description": "Check if the API is healthy and running"
+                    }
+                },
+                {
+                    "name": "API Root Info",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                ""
+                            ]
+                        },
+                        "description": "Get API information and available endpoints"
+                    }
+                }
+            ],
+            "description": "Basic health check and API information endpoints"
+        },
+        {
+            "name": "Projects API",
+            "item": [
+                {
+                    "name": "Get All Projects",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                ""
+                            ]
+                        },
+                        "description": "Retrieve all procurement projects without any filters"
+                    }
+                },
+                {
+                    "name": "Get Projects - Filter by Ministry",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/?ministry=Ministry of Health",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "ministry",
+                                    "value": "Ministry of Health"
+                                }
+                            ]
+                        },
+                        "description": "Filter projects by specific ministry"
+                    }
+                },
+                {
+                    "name": "Get Projects - Filter by Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/?status=In Progress",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "In Progress"
+                                }
+                            ]
+                        },
+                        "description": "Filter projects by status (Planning, In Progress, Completed, etc.)"
+                    }
+                },
+                {
+                    "name": "Get Projects - Filter by Fiscal Year",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/?fiscal_year=2024-25",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "fiscal_year",
+                                    "value": "2024-25"
+                                }
+                            ]
+                        },
+                        "description": "Filter projects by fiscal year"
+                    }
+                },
+                {
+                    "name": "Get Projects - Budget Range Filter",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/?min_amount=100000&max_amount=5000000",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "min_amount",
+                                    "value": "100000"
+                                },
+                                {
+                                    "key": "max_amount",
+                                    "value": "5000000"
+                                }
+                            ]
+                        },
+                        "description": "Filter projects by contract amount range"
+                    }
+                },
+                {
+                    "name": "Get Projects - Text Search",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/?search=health center",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "search",
+                                    "value": "health center"
+                                }
+                            ]
+                        },
+                        "description": "Search projects by text in project details, ministry, or contractor name"
+                    }
+                },
+                {
+                    "name": "Get Projects - Combined Filters",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/?ministry=Ministry of Health&status=In Progress&min_amount=50000&search=construction",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "ministry",
+                                    "value": "Ministry of Health"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "In Progress"
+                                },
+                                {
+                                    "key": "min_amount",
+                                    "value": "50000"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "construction"
+                                }
+                            ]
+                        },
+                        "description": "Example of combining multiple filters"
+                    }
+                },
+                {
+                    "name": "Get Project by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/{{project_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                "{{project_id}}"
+                            ]
+                        },
+                        "description": "Get detailed information about a specific project including citizen reports"
+                    }
+                },
+                {
+                    "name": "Get Project Progress",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/{{project_id}}/progress",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                "{{project_id}}",
+                                "progress"
+                            ]
+                        },
+                        "description": "Get progress tracking information for a specific project"
+                    }
+                },
+                {
+                    "name": "Submit Citizen Report",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reporter_name\": \"John Citizen\",\n    \"report_text\": \"I visited the construction site today and noticed that the work progress seems slower than the official 35% completion reported. The foundation work is complete, but the walls are only partially built.\",\n    \"photo_url\": \"https://example.com/construction_photo.jpg\",\n    \"geolocation\": {\n        \"lat\": 27.7172,\n        \"lng\": 85.3240\n    },\n    \"timestamp\": \"2024-11-21T10:30:00Z\",\n    \"verified\": false\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/{{project_id}}/report",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                "{{project_id}}",
+                                "report"
+                            ]
+                        },
+                        "description": "Submit a citizen report for a specific project"
+                    }
+                },
+                {
+                    "name": "Get Project Reports",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/{{project_id}}/reports",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                "{{project_id}}",
+                                "reports"
+                            ]
+                        },
+                        "description": "Get all citizen reports for a specific project"
+                    }
+                },
+                {
+                    "name": "Get Overall Statistics",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/stats/overview",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                "stats",
+                                "overview"
+                            ]
+                        },
+                        "description": "Get overall platform statistics including total projects, budget, and status breakdown"
+                    }
+                },
+                {
+                    "name": "Get Filter Options",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/projects/filters/options",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "projects",
+                                "filters",
+                                "options"
+                            ]
+                        },
+                        "description": "Get available filter options for the frontend (ministries, fiscal years, statuses, procurement methods)"
+                    }
+                }
+            ],
+            "description": "All project-related API endpoints including filtering, details, progress tracking, and citizen reporting"
+        },
+        {
+            "name": "Reviews & File Upload API",
+            "item": [
+                {
+                    "name": "Upload Single Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": "sample_image.jpg",
+                                    "description": "Select an image file (JPG, PNG, GIF, WebP, max 10MB)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/reviews/upload-image",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "reviews",
+                                "upload-image"
+                            ]
+                        },
+                        "description": "Upload a single image for a citizen review"
+                    }
+                },
+                {
+                    "name": "Upload Multiple Images",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "files",
+                                    "type": "file",
+                                    "src": "image1.jpg",
+                                    "description": "First image"
+                                },
+                                {
+                                    "key": "files",
+                                    "type": "file",
+                                    "src": "image2.jpg",
+                                    "description": "Second image"
+                                },
+                                {
+                                    "key": "files",
+                                    "type": "file",
+                                    "src": "image3.jpg",
+                                    "description": "Third image (up to 5 images allowed)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/reviews/upload-images",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "reviews",
+                                "upload-images"
+                            ]
+                        },
+                        "description": "Upload multiple images (up to 5) for a citizen review"
+                    }
+                },
+                {
+                    "name": "Submit Review with Images",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "reporter_name",
+                                    "value": "Jane Citizen",
+                                    "type": "text",
+                                    "description": "Name of the reporter (optional for anonymous reporting)"
+                                },
+                                {
+                                    "key": "reporter_contact",
+                                    "value": "jane.citizen@email.com",
+                                    "type": "text",
+                                    "description": "Contact information (optional)"
+                                },
+                                {
+                                    "key": "review_type",
+                                    "value": "Progress Update",
+                                    "type": "text",
+                                    "description": "Type of review: Progress Update, Quality Issue, Completion Verification, Delay Report, Fraud Alert"
+                                },
+                                {
+                                    "key": "review_text",
+                                    "value": "I visited the health center construction site today. The foundation and structural work appear to be on track. However, I noticed some quality issues with the concrete work on the eastern wall. The construction team was present and actively working on the roofing structure.",
+                                    "type": "text",
+                                    "description": "Detailed review text (minimum 10 characters)"
+                                },
+                                {
+                                    "key": "work_completed",
+                                    "value": "true",
+                                    "type": "text",
+                                    "description": "Boolean indicating if work is completed as claimed"
+                                },
+                                {
+                                    "key": "quality_rating",
+                                    "value": "3",
+                                    "type": "text",
+                                    "description": "Quality rating from 1-5 (optional)"
+                                },
+                                {
+                                    "key": "latitude",
+                                    "value": "27.7172",
+                                    "type": "text",
+                                    "description": "GPS latitude (optional)"
+                                },
+                                {
+                                    "key": "longitude",
+                                    "value": "85.3240",
+                                    "type": "text",
+                                    "description": "GPS longitude (optional)"
+                                },
+                                {
+                                    "key": "images",
+                                    "type": "file",
+                                    "src": "construction_site1.jpg",
+                                    "description": "First image of the construction site"
+                                },
+                                {
+                                    "key": "images",
+                                    "type": "file",
+                                    "src": "construction_site2.jpg",
+                                    "description": "Second image showing quality issues"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/reviews/{{project_id}}/submit",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "reviews",
+                                "{{project_id}}",
+                                "submit"
+                            ]
+                        },
+                        "description": "Submit a complete citizen review with optional images and metadata"
+                    }
+                },
+                {
+                    "name": "Submit Anonymous Review",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "review_type",
+                                    "value": "Quality Issue",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "review_text",
+                                    "value": "Anonymous report: There are significant delays in the project. No work has been observed for the past two weeks despite the official progress showing 35% completion.",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "work_completed",
+                                    "value": "false",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "quality_rating",
+                                    "value": "2",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/reviews/{{project_id}}/submit",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "reviews",
+                                "{{project_id}}",
+                                "submit"
+                            ]
+                        },
+                        "description": "Submit an anonymous review without images"
+                    }
+                },
+                {
+                    "name": "Get Review Image by Filename",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/reviews/image/{{image_filename}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "reviews",
+                                "image",
+                                "{{image_filename}}"
+                            ]
+                        },
+                        "description": "Retrieve an uploaded review image by filename. Get the filename from the photo_urls array in the review response."
+                    }
+                },
+                {
+                    "name": "Get Review Images for Specific Review",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/reviews/{{project_id}}/all",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "reviews",
+                                "{{project_id}}",
+                                "all"
+                            ]
+                        },
+                        "description": "First get all reviews for a project, then use the photo_urls from a specific review_id to access images. Each review contains photo_urls array with filenames."
+                    }
+                },
+                {
+                    "name": "Get Specific Review by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/reviews/{{project_id}}/review/{{review_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "reviews",
+                                "{{project_id}}",
+                                "review",
+                                "{{review_id}}"
+                            ]
+                        },
+                        "description": "Get a specific review by review_id for a project. Returns detailed information about a single citizen review including all images and metadata."
+                    }
+                },
+                {
+                    "name": "Get All Project Reviews",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/reviews/{{project_id}}/all",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "reviews",
+                                "{{project_id}}",
+                                "all"
+                            ]
+                        },
+                        "description": "Get all reviews for a specific project with image URLs"
+                    }
+                },
+                {
+                    "name": "Get Project Review Summary",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/reviews/{{project_id}}/summary",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "reviews",
+                                "{{project_id}}",
+                                "summary"
+                            ]
+                        },
+                        "description": "Get summary statistics of reviews for a project including completion percentage, quality ratings, and review type breakdown"
+                    }
+                },
+                {
+                    "name": "Delete Review Image",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/reviews/image/{{image_filename}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "reviews",
+                                "image",
+                                "{{image_filename}}"
+                            ]
+                        },
+                        "description": "Delete an uploaded review image (admin function)"
+                    }
+                }
+            ],
+            "description": "All review and file upload related API endpoints including image management and review analytics"
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000",
+            "description": "Base URL for the CMD Transparency API (change for different environments)"
+        },
+        {
+            "key": "project_id",
+            "value": "PRJ-2087-001",
+            "description": "Sample project ID for testing (Rural Health Center Construction)"
+        },
+        {
+            "key": "review_id",
+            "value": "REV-SAMPLE01",
+            "description": "Sample review ID for testing - get actual review_id from project reviews response"
+        },
+        {
+            "key": "image_filename",
+            "value": "uuid-generated-filename.jpg",
+            "description": "Sample image filename for testing - get actual filename from photo_urls array in review response"
+        }
+    ]
+}
