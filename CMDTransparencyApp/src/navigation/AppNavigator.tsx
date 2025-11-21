@@ -8,7 +8,7 @@ import HomeScreen from '../screens/HomeScreen';
 import ProjectBrowserScreen from '../screens/ProjectBrowserScreenSimple';
 import ProjectDetailScreen from '../screens/ProjectDetailScreen';
 import ReviewSubmissionScreen from '../screens/ReviewSubmissionScreen';
-import MapViewScreen from '../screens/MapViewScreenSimple';
+import MapViewScreen from '../screens/MapViewScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreenSimple';
 import ProfileScreen from '../screens/ProfileScreenSimple';
 

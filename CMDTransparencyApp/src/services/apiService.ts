@@ -1,12 +1,23 @@
 import axios, { AxiosResponse } from 'axios';
 import { Project, ProjectFilter, Statistics, FilterOptions, CitizenReport, ReviewSubmission, ReviewSubmissionResponse, ImageUploadResponse, ReviewSummary } from '../types';
+import { mockProjects, filterMockProjects } from '../data/mockProjects';
 
 // API Configuration
-const API_BASE_URL = __DEV__ ? 'http://localhost:8000' : 'http://localhost:8000';
+// Prefer an explicit env var, otherwise for web use the current hostname so the
+// frontend can reach a backend on the same machine. Keep the original
+// fallbacks for native/dev builds.
+const API_BASE_URL =
+  (process.env.REACT_APP_API_URL as string | undefined) ||
+  (typeof window !== 'undefined'
+    ? `http://${window.location.hostname}:8000`
+    : __DEV__
+    ? 'http://192.168.88.191:8000'
+    : 'http://localhost:8000');
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  // increase timeout to handle slower local backends during development
+  timeout: 20000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -31,10 +42,64 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('API Response Error:', error.response?.data || error.message);
+    // log extra info for network/timeouts
+    const code = (error && error.code) || null;
+    const message = error.response?.data || error.message;
+    if (code === 'ECONNABORTED') {
+      console.error('API Response Error: request timeout', { code, message });
+    } else {
+      console.error('API Response Error:', message, { code });
+    }
     return Promise.reject(error);
   }
 );
+
+const shouldUseMockFallback = (error: any): boolean => {
+  if (!error) return false;
+  if (error.code === 'ERR_NETWORK') return true;
+  if (error.isAxiosError && !error.response) return true;
+  return false;
+};
+
+const buildMockStatistics = (): Statistics => {
+  const totalProjects = mockProjects.length;
+  const totalContractValue = mockProjects.reduce(
+    (sum, project) => sum + (project.procurement_plan.contract_amount ?? 0),
+    0
+  );
+  const averageProgress = totalProjects
+    ? mockProjects.reduce((sum, project) => sum + (project.progress_percentage ?? 0), 0) / totalProjects
+    : 0;
+  const statusBreakdown = mockProjects.reduce<Record<string, number>>((acc, project) => {
+    acc[project.status] = (acc[project.status] || 0) + 1;
+    return acc;
+  }, {});
+  const totalCitizenReports = mockProjects.reduce(
+    (sum, project) => sum + (project.citizen_reports_count ?? 0),
+    0
+  );
+  const fiscalYears = Array.from(new Set(mockProjects.map((project) => project.fiscal_year)));
+  const ministries = Array.from(new Set(mockProjects.map((project) => project.ministry)));
+
+  return {
+    total_projects: totalProjects,
+    total_contract_value: totalContractValue,
+    average_progress: Number(averageProgress.toFixed(2)),
+    status_breakdown: statusBreakdown,
+    total_citizen_reports: totalCitizenReports,
+    ministries_count: ministries.length,
+    fiscal_years: fiscalYears,
+  };
+};
+
+const buildMockFilters = (): FilterOptions => ({
+  ministries: Array.from(new Set(mockProjects.map((project) => project.ministry))),
+  fiscal_years: Array.from(new Set(mockProjects.map((project) => project.fiscal_year))),
+  statuses: Array.from(new Set(mockProjects.map((project) => project.status))),
+  procurement_methods: Array.from(
+    new Set(mockProjects.map((project) => project.procurement_plan.procurement_method))
+  ),
+});
 
 // Projects API
 export const projectsApi = {
@@ -48,33 +113,62 @@ export const projectsApi = {
         }
       });
     }
-    
-    const response: AxiosResponse<Project[]> = await apiClient.get(
-      `/api/projects/${params.toString() ? `?${params.toString()}` : ''}`
-    );
-    
-    // Ensure boolean fields are properly converted
-    return response.data.map(project => ({
-      ...project,
-      citizen_reports: project.citizen_reports?.map(report => ({
-        ...report,
-        work_completed: Boolean(report.work_completed),
-        verified: Boolean(report.verified),
-      })) || [],
-    }));
+
+    try {
+      const response: AxiosResponse<Project[]> = await apiClient.get(
+        `/api/projects/${params.toString() ? `?${params.toString()}` : ''}`
+      );
+
+      return response.data.map((project) => ({
+        ...project,
+        citizen_reports:
+          project.citizen_reports?.map((report) => ({
+            ...report,
+            work_completed: Boolean(report.work_completed),
+            verified: Boolean(report.verified),
+          })) || [],
+      }));
+    } catch (error) {
+      if (shouldUseMockFallback(error)) {
+        console.warn('API unreachable, serving mock project data.');
+        return filterMockProjects(filters).map((project) => ({
+          ...project,
+          citizen_reports:
+            project.citizen_reports?.map((report) => ({
+              ...report,
+              work_completed: Boolean(report.work_completed),
+              verified: Boolean(report.verified),
+            })) || [],
+        }));
+      }
+      throw error;
+    }
   },
 
   // Get single project
   getProject: async (projectId: string): Promise<Project> => {
-    const response: AxiosResponse<Project> = await apiClient.get(`/api/projects/${projectId}`);
-    return {
-      ...response.data,
-      citizen_reports: response.data.citizen_reports?.map(report => ({
-        ...report,
-        work_completed: Boolean(report.work_completed),
-        verified: Boolean(report.verified),
-      })) || [],
-    };
+    try {
+      const response: AxiosResponse<Project> = await apiClient.get(`/api/projects/${projectId}`);
+      return {
+        ...response.data,
+        citizen_reports:
+          response.data.citizen_reports?.map((report) => ({
+            ...report,
+            work_completed: Boolean(report.work_completed),
+            verified: Boolean(report.verified),
+          })) || [],
+      };
+    } catch (error) {
+      if (shouldUseMockFallback(error)) {
+        console.warn(`API unreachable, serving mock project ${projectId}.`);
+        const mockProject = mockProjects.find((project) => project.id === projectId);
+        if (!mockProject) {
+          throw error;
+        }
+        return mockProject;
+      }
+      throw error;
+    }
   },
 
   // Get project progress
@@ -85,14 +179,30 @@ export const projectsApi = {
 
   // Get statistics
   getStatistics: async (): Promise<Statistics> => {
-    const response: AxiosResponse<Statistics> = await apiClient.get('/api/projects/stats/overview');
-    return response.data;
+    try {
+      const response: AxiosResponse<Statistics> = await apiClient.get('/api/projects/stats/overview');
+      return response.data;
+    } catch (error) {
+      if (shouldUseMockFallback(error)) {
+        console.warn('API unreachable, serving mock statistics.');
+        return buildMockStatistics();
+      }
+      throw error;
+    }
   },
 
   // Get filter options
   getFilterOptions: async (): Promise<FilterOptions> => {
-    const response: AxiosResponse<FilterOptions> = await apiClient.get('/api/projects/filters/options');
-    return response.data;
+    try {
+      const response: AxiosResponse<FilterOptions> = await apiClient.get('/api/projects/filters/options');
+      return response.data;
+    } catch (error) {
+      if (shouldUseMockFallback(error)) {
+        console.warn('API unreachable, serving mock filter options.');
+        return buildMockFilters();
+      }
+      throw error;
+    }
   },
 
   // Submit report (legacy)
@@ -103,8 +213,17 @@ export const projectsApi = {
 
   // Get project reports
   getProjectReports: async (projectId: string): Promise<CitizenReport[]> => {
-    const response: AxiosResponse<CitizenReport[]> = await apiClient.get(`/api/projects/${projectId}/reports`);
-    return response.data;
+    try {
+      const response: AxiosResponse<CitizenReport[]> = await apiClient.get(`/api/projects/${projectId}/reports`);
+      return response.data;
+    } catch (error) {
+      if (shouldUseMockFallback(error)) {
+        console.warn(`API unreachable, serving mock reports for ${projectId}.`);
+        const mockProject = mockProjects.find((project) => project.id === projectId);
+        return mockProject?.citizen_reports || [];
+      }
+      throw error;
+    }
   },
 };
 
@@ -179,6 +298,10 @@ export const reviewsApi = {
 
 // Error handling helper
 export const handleApiError = (error: any): string => {
+  if (error && error.code === 'ECONNABORTED') {
+    return 'Request timed out: the server did not respond in time';
+  }
+
   if (error.response) {
     // Server responded with error status
     const status = error.response.status;
