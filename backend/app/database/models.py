@@ -8,10 +8,39 @@ from sqlalchemy import (
     DateTime,
     JSON,
     ForeignKey,
+    Enum,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database.config import Base
+import enum
+
+
+class UserRole(enum.Enum):
+    """User roles in the system"""
+
+    CITIZEN = "citizen"
+    OFFICIAL = "official"
+    ADMIN = "admin"
+
+
+class User(Base):
+    """User accounts for authentication"""
+
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False, index=True)
+    phone = Column(String, nullable=True)
+    hashed_password = Column(String, nullable=False)
+    role = Column(Enum(UserRole), nullable=False, default=UserRole.CITIZEN)
+    verified = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_login = Column(DateTime(timezone=True), nullable=True)
 
 
 class Project(Base):

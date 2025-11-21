@@ -6,6 +6,8 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
+from langchain_openai import OpenAIEmbeddings
+
 
 def load_pdfs(filepaths):
     """Loads PDFs but logs empty PDFs to empty.txt."""
@@ -58,6 +60,11 @@ def save_pdf_state(state_path, state):
     with open(state_path, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2)
 
+def get_openai_api_key() -> str:
+    """Use MATE if set, otherwise fall back to OPENAI_API_KEY."""
+    key = os.getenv("RAG_KEY")
+    print(key)
+    return key
 
 def find_new_or_updated_pdfs(pdf_dir, state, empty_log_path="empty.txt"):
     """
@@ -125,9 +132,9 @@ def main():
     else:
         print("No new or updated PDFs. Using existing vector store only.")
 
-    # 2. Initialize embeddings and (possibly existing) vector store
-    embedding = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-mpnet-base-v2"
+    embedding = OpenAIEmbeddings(
+        model="text-embedding-3-small",   # or "text-embedding-3-small"
+        api_key=get_openai_api_key()
     )
 
     # This will load existing DB if present, or create a new empty one
@@ -139,9 +146,11 @@ def main():
     # 3. Process each new/changed PDF ONE BY ONE
     if new_files:
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200
+            chunk_size=2000,   # or 1500–2500
+            chunk_overlap=300,
+            separators=["\n\n", "\n", "।", ".", " ", ""],  # add Nepali sentence delimiter "।"
         )
+
 
         for full_path, filename, mtime in new_files:
             print(f"\n Processing file: {filename}")

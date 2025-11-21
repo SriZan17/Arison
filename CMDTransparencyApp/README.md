@@ -1,4 +1,4 @@
-# CMD Transparency Mobile App
+# E-निरीक्षण Mobile App
 
 A React Native Expo application for the CMD Government Procurement Transparency Platform, enabling citizens to monitor government projects and submit reports with photographic evidence.
 
@@ -10,6 +10,7 @@ A React Native Expo application for the CMD Government Procurement Transparency 
 - **Review Submission**: Submit citizen reports with photo upload
 - **Map View**: Geographic visualization of projects
 - **Analytics**: Statistical insights and transparency metrics
+- **i-maan AI Assistant**: Voice-enabled RAG chatbot for government information in Nepali
 - **Location Services**: GPS-based project recommendations
 - **Real-time Data**: Live updates from government databases
 
@@ -21,8 +22,11 @@ A React Native Expo application for the CMD Government Procurement Transparency 
 - **React Navigation**: Tab and stack navigation
 - **Expo Location**: GPS and location services
 - **Expo Image Picker**: Camera and photo gallery access
+- **Expo AV**: Audio recording and playback for voice features
+- **Expo Speech**: Text-to-speech functionality
 - **React Native Maps**: Interactive map components
 - **React Native SVG**: Vector graphics for charts and icons
+- **RAG AI System**: Retrieval-Augmented Generation for intelligent responses
 
 ## 📋 Prerequisites
 
@@ -298,6 +302,39 @@ If you want, I can:
 - 📋 Report verification system
 - 📋 Multi-language support
 
+## 🤖 i-maan AI Assistant
+
+i-maan is an integrated AI assistant that provides voice-enabled interactions in Nepali language for government transparency information.
+
+### Features:
+- **Voice Input**: Record questions in Nepali or English
+- **Speech-to-Text**: Automatic transcription of voice messages
+- **RAG Integration**: Retrieval-Augmented Generation for accurate responses
+- **Text-to-Speech**: Responds in voice (Nepali/English)
+- **Document Sources**: Shows relevant government document references
+
+### Setup RAG Backend:
+```bash
+# Navigate to RAG directory
+cd ../rag
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set up environment variables
+echo "RAG_KEY=your_openai_api_key" > .env
+
+# Run the RAG server
+python -m uvicorn api:app --reload --port 8080 --host 0.0.0.0
+```
+
+### Usage:
+1. Tap the **i-maan** tab in the app
+2. Press and hold the microphone button to record your question
+3. Speak in Nepali: "सरकारी परियोजनाहरूको बारेमा जानकारी चाहिन्छ"
+4. Release to send - i-maan will respond with relevant information
+5. Tap the speaker icon to hear the response
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -319,5 +356,6 @@ If you want, I can:
 **📊 Real Data**: ✅ Live government project data  
 **📍 Location Services**: ✅ GPS and nearby projects  
 **📸 Media Upload**: ✅ Photo capture and selection ready  
+**🤖 i-maan AI**: ✅ Voice-enabled RAG chatbot in Nepali
 
 *Built with ❤️ for Democratic Transparency and Citizen Engagement*

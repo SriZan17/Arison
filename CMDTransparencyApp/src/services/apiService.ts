@@ -1,5 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Project, ProjectFilter, Statistics, FilterOptions, CitizenReport, ReviewSubmission, ReviewSubmissionResponse, ImageUploadResponse, ReviewSummary } from '../types';
 
 // API Configuration
@@ -15,6 +16,21 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+// Storage keys (must match AuthContext)
+const STORAGE_KEYS = {
+  TOKEN: '@e_nirikshan_token',
+};
+
+// Function to get auth token
+const getAuthToken = async (): Promise<string | null> => {
+  try {
+    return await AsyncStorage.getItem(STORAGE_KEYS.TOKEN);
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
+  }
+};
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
@@ -23,10 +39,17 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor for logging
+// Request interceptor for authentication and logging
 apiClient.interceptors.request.use(
-  (config) => {
+  async (config) => {
     console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    
+    // Add authentication token if available
+    const token = await getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
     return config;
   },
   (error) => {
@@ -43,9 +66,32 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     console.error('API Response Error:', error.response?.data || error.message);
+    
+    // Handle 401 Unauthorized errors
+    if (error.response?.status === 401) {
+      console.warn('Authentication failed - token may be invalid or expired');
+      // You could dispatch a logout action here if you have access to the auth context
+    }
+    
     return Promise.reject(error);
   }
 );
+
+// Helper function to create authenticated requests
+const createAuthenticatedRequest = async (config: any) => {
+  const token = await getAuthToken();
+  if (!token) {
+    throw new Error('Authentication token not found. Please log in again.');
+  }
+  
+  return {
+    ...config,
+    headers: {
+      ...config.headers,
+      Authorization: `Bearer ${token}`,
+    },
+  };
+};
 
 // Projects API
 export const projectsApi = {
@@ -121,42 +167,54 @@ export const projectsApi = {
 
 // Reviews API
 export const reviewsApi = {
-  // Upload single image
+  // Upload single image (requires authentication)
   uploadImage: async (formData: FormData): Promise<ImageUploadResponse> => {
+    const token = await getAuthToken();
+    
     const response: AxiosResponse<ImageUploadResponse> = await apiClient.post(
       '/api/reviews/upload-image',
       formData,
       {
         headers: {
           'Content-Type': 'multipart/form-data',
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
       }
     );
     return response.data;
   },
 
-  // Upload multiple images
+  // Upload multiple images (requires authentication)
   uploadImages: async (formData: FormData): Promise<ImageUploadResponse[]> => {
+    const token = await getAuthToken();
+    
     const response: AxiosResponse<ImageUploadResponse[]> = await apiClient.post(
       '/api/reviews/upload-images',
       formData,
       {
         headers: {
           'Content-Type': 'multipart/form-data',
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
       }
     );
     return response.data;
   },
 
-  // Submit review with images
+  // Submit review with images (requires authentication)
   submitReviewWithImages: async (projectId: string, reviewData: FormData): Promise<ReviewSubmissionResponse> => {
+    const token = await getAuthToken();
+    if (!token) {
+      throw new Error('Authentication required. Please log in to submit reviews.');
+    }
+
     const response: AxiosResponse<ReviewSubmissionResponse> = await apiClient.post(
       `/api/reviews/${projectId}/submit`,
       reviewData,
       {
         headers: {
           'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
         },
       }
     );
@@ -228,22 +286,28 @@ export const handleApiError = (error: any): string => {
       case 400:
         return `Bad request: ${message}`;
       case 401:
-        return 'Unauthorized access';
+        return 'Authentication required. Please log in again.';
       case 403:
-        return 'Access forbidden';
+        return 'Access forbidden. You do not have permission to perform this action.';
       case 404:
         return 'Resource not found';
       case 500:
-        return 'Internal server error';
+        return 'Internal server error. Please try again later.';
       default:
         return `Error ${status}: ${message}`;
     }
   } else if (error.request) {
     // Network error
-    return 'Network error: Please check your internet connection';
+    return 'Network error: Please check your internet connection and ensure the server is running.';
+  } else if (error.message) {
+    // Authentication or other custom errors
+    if (error.message.includes('Authentication')) {
+      return error.message;
+    }
+    return error.message;
   } else {
     // Other error
-    return error.message || 'An unexpected error occurred';
+    return 'An unexpected error occurred';
   }
 };
 

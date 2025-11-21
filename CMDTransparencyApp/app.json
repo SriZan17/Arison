@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "CMD Transparency App",
-    "slug": "cmd-transparency-app",
+    "name": "E-निरीक्षण",
+    "slug": "e-nirikshan",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,7 +17,9 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to location to show nearby government projects and enable location-based reporting.",
         "NSCameraUsageDescription": "This app needs access to camera to capture photos for project reports.",
-        "NSPhotoLibraryUsageDescription": "This app needs access to photo library to select images for project reports."
+        "NSPhotoLibraryUsageDescription": "This app needs access to photo library to select images for project reports.",
+        "NSMicrophoneUsageDescription": "This app needs access to microphone for voice messages to i-maan AI assistant.",
+        "NSSpeechRecognitionUsageDescription": "This app needs access to speech recognition for voice commands to i-maan AI assistant."
       }
     },
     "android": {
@@ -30,7 +32,9 @@
         "ACCESS_COARSE_LOCATION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS"
       ]
     },
     "web": {
@@ -40,14 +44,20 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow CMD Transparency App to use your location to show nearby projects."
+          "locationAlwaysAndWhenInUsePermission": "Allow E-निरीक्षण to use your location to show nearby projects."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow CMD Transparency App to access your photos to upload project evidence.",
-          "cameraPermission": "Allow CMD Transparency App to access camera to capture project photos."
+          "photosPermission": "Allow E-निरीक्षण to access your photos to upload project evidence.",
+          "cameraPermission": "Allow E-निरीक्षण to access camera to capture project photos."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow CMD Transparency App to access microphone for voice messages to i-maan AI assistant."
         }
       ]
     ]

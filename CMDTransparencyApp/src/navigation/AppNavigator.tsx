@@ -12,6 +12,13 @@ import ProjectDetailScreen from '../screens/ProjectDetailScreen';
 import ReviewSubmissionScreen from '../screens/ReviewSubmissionScreen';
 import MapViewScreen from '../screens/MapViewScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreenSimple';
+import IMaanScreen from '../screens/IMaanScreen';
+
+// Navigation
+import AuthNavigator from './AuthNavigator';
+
+// Context
+import { useAuth } from '../context/AuthContext';
 
 import { theme } from '../styles/theme';
 
@@ -26,6 +33,7 @@ export type MainTabParamList = {
   Projects: undefined;
   Map: undefined;
   Analytics: undefined;
+  IMaan: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -52,6 +60,9 @@ const MainTabNavigator: React.FC = () => {
               break;
             case 'Analytics':
               iconName = focused ? 'stats-chart' : 'stats-chart-outline';
+              break;
+            case 'IMaan':
+              iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
               break;
             default:
               iconName = 'home-outline';
@@ -85,7 +96,7 @@ const MainTabNavigator: React.FC = () => {
       <Tab.Screen 
         name="Home" 
         component={HomeScreen}
-        options={{ title: 'CMD Transparency' }}
+        options={{ title: 'E-निरीक्षण' }}
       />
       <Tab.Screen 
         name="Projects" 
@@ -102,13 +113,30 @@ const MainTabNavigator: React.FC = () => {
         component={AnalyticsScreen}
         options={{ title: 'Analytics' }}
       />
+      <Tab.Screen 
+        name="IMaan" 
+        component={IMaanScreen}
+        options={{ title: 'i-maan' }}
+      />
     </Tab.Navigator>
   );
 };
 
 const AppNavigator: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const { user, loading } = useAuth();
+
+  // Show loading screen while checking authentication status
+  if (loading) {
+    return null; // Could return a splash screen component here
+  }
+
+  // Show auth navigator if user is not authenticated
+  if (!user) {
+    return <AuthNavigator />;
+  }
   
+  // Show main app if user is authenticated
   return (
     <Stack.Navigator
       screenOptions={{
@@ -118,9 +146,6 @@ const AppNavigator: React.FC = () => {
         headerTintColor: theme.colors.surface,
         headerTitleStyle: {
           fontWeight: 'bold',
-        },
-        headerSafeAreaInsets: {
-          top: insets.top,
         },
       }}
     >

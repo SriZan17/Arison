@@ -27,6 +27,9 @@ import { useStatistics, useProjects } from '../hooks/useApi';
 // Services
 import { LocationService } from '../services/locationService';
 
+// Context
+import { useAuth } from '../context/AuthContext';
+
 // Types
 import { theme } from '../styles/theme';
 import { RootStackParamList, MainTabParamList } from '../navigation/AppNavigator';
@@ -38,6 +41,7 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  const { user, logout } = useAuth();
   
   const [refreshing, setRefreshing] = useState(false);
   const [userLocation, setUserLocation] = useState<{
@@ -107,6 +111,21 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('ProjectDetail', { projectId });
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          style: 'destructive',
+          onPress: logout
+        },
+      ]
+    );
+  };
+
   if (statsLoading || projectsLoading) {
     return <LoadingSpinner message="Loading dashboard..." />;
   }
@@ -130,11 +149,23 @@ const HomeScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
       <View style={styles.header}>
-        <Text style={styles.welcomeText}>Welcome to</Text>
-        <Text style={styles.titleText}>CMD Transparency Portal</Text>
-        <Text style={styles.subtitleText}>
-          Monitor government procurement projects and contribute to transparency
-        </Text>
+        <View style={styles.headerContent}>
+          <View style={styles.headerText}>
+            <Text style={styles.welcomeText}>
+              Welcome, {user?.name || 'User'}
+            </Text>
+            <Text style={styles.titleText}>E-निरीक्षण</Text>
+            <Text style={styles.subtitleText}>
+              Monitor government procurement projects and contribute to transparency
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={handleLogout}
+          >
+            <Ionicons name="log-out-outline" size={24} color={theme.colors.surface} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Quick Actions */}
@@ -250,6 +281,18 @@ const styles = StyleSheet.create({
   header: {
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.primary,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  headerText: {
+    flex: 1,
+  },
+  logoutButton: {
+    padding: theme.spacing.sm,
+    marginTop: -theme.spacing.sm,
   },
   welcomeText: {
     fontSize: theme.typography.caption.fontSize,

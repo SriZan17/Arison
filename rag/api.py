@@ -1,17 +1,26 @@
 import os
 import json
-
+import torch
 import openai
 import torch
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
+from langchain_openai import OpenAIEmbeddings
 
 # -------------------------------------------------------------------
 # FastAPI setup
 # -------------------------------------------------------------------
+def resolve_device():
+    """Return the best available torch device for embeddings."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return "cuda"
+    except Exception:
+        pass
+    return "cpu"
 
 load_dotenv()
 
@@ -58,13 +67,15 @@ def get_rag_retriever():
         )
 
     # Use same embedding model/config as ingestion
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"[RAG] Using device for embeddings: {device}")
+    device = resolve_device()
+    print(f"Embedding model device: {device}")
+    
 
-    embedding = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-mpnet-base-v2",
-        model_kwargs={"device": device},
+    embedding = OpenAIEmbeddings(
+        model="text-embedding-3-small",   
+        api_key=get_openai_api_key()
     )
+
 
     rag_vectorstore = Chroma(
         persist_directory=RAG_PERSIST_DIR,
@@ -169,13 +180,42 @@ async def rag_chatbot_endpoint(request: Request):
 
     # 2) Build RAG-aware system prompt
     system_prompt = (
-        "You are a retrieval-augmented assistant who helps Nepali citizens.\n"
-        "You answer questions using ONLY the context provided below.\n"
-        "If the answer is not clearly supported by the context, say you don't know.\n\n"
-        "CONTEXT:\n"
-        f"{context_text}\n\n"
-        "When you answer, be clear and concise. If relevant, mention which section or law you are referring to."
+    "You are an assistant that helps people understand official government procedures, "
+    "required documents, and official fees in Nepal. Your main goal is to prevent citizens "
+    "from being exploited, overcharged, or misled by bureaucrats.\n\n"
+    "You are given some legal and procedural context below (laws, regulations, notices, "
+    "and guidelines). Treat this a primary reference.\n\n"
+    "When you answer questions:\n"
+    "- Focus on explaining:\n"
+    "  • What the process is (step by step).\n"
+    "  • Which office or authority is responsible.\n"
+    "  • What documents are required.\n"
+    "  • What are the costs to be paid if any.\n"
+#    "- If the context clearly states the fee or required documents, use those exact details.\n"
+#    "- If the context is partial or does not mention everything, use your general understanding "
+#    "  of Nepal’s administrative practices to give a helpful and realistic answer.\n"
+    "- Always make it clear that only officially prescribed fees should be paid. Politely remind "
+    "  users that they are not required to pay any extra or unofficial amount beyond the official "
+    "  government fee, and that they should always ask for an official receipt.\n"
+    "- If a user describes a situation that looks like bribery, overcharging, or harassment, "
+    "  calmly explain that such demands are not legal and suggest that they can:\n"
+    "  • Refuse to pay unofficial fees.\n"
+    "  • Ask for written/official notice of any fee.\n"
+    "  • Record details (date, office, name of officer, amount asked).\n"
+    "  • Contact the appropriate complaint or anti-corruption channel in Nepal.\n"
+    "- If the question is clearly unrelated to government procedures, laws or corruption, answer "
+    "  briefly or explain that you are focused on administrative and legal information.\n\n"
+    "Style guidelines:\n"
+    "- Answer using the language of the user content (English or Nepali).\n"
+    "- Prefer bullet points and short steps instead of long paragraphs.\n"
+    "- Mention, where possible, which law, rule, or type of official document your answer is based on.\n"
+    "Below is the context you can use:\n\n"
+    "CONTEXT:\n"
+    f"{context_text}\n\n"
     )
+
+
+
 
     # Compose final messages: system + existing conversation
     full_messages = [
@@ -217,4 +257,4 @@ async def rag_chatbot_endpoint(request: Request):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(app, host="0.0.0.0", port=8090)
