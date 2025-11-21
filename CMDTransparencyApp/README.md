@@ -239,6 +239,34 @@ npm start --clear
 3. **Monitor Logs**: Use `npx react-native log-android` or iOS console
 4. **Test Offline**: Verify app behavior without internet
 
+## 🗺️ Map View (native + web fallback)
+
+This project includes a `MapView` screen that shows projects on a map. For native (Expo) builds the screen uses `react-native-maps`; the web build falls back to OpenStreetMap links so the bundle stays lightweight.
+
+To enable the native map functionality (recommended for mobile testing), install the package and follow Expo's guidance:
+
+```bash
+# from the `CMDTransparencyApp` folder
+npx expo install react-native-maps
+```
+
+Notes:
+- Expo-managed apps can use `react-native-maps`. On iOS you may need to provide Google Maps API keys for certain features; on Android, ensure the Google Play services are available on device/emulator.
+- The web fallback does not require additional deps: it renders a simple project list with OpenStreetMap links. For a richer web map experience consider adding `leaflet`/`react-leaflet`.
+
+Street-level imagery (street view):
+- Google Street View requires API keys and billing — not free for production use.
+- Free community alternatives include Mapillary and KartaView (OpenStreetCam). You can link to those services for street-level imagery at a given lat/lon, or ingest imagery collected by users into your own storage and display it in the app.
+
+To add street-level photos to projects:
+1. Allow users to upload photos when submitting reviews (already supported in the app). Store geolocation metadata with the photos.
+2. Show uploaded photos in the project detail screen and, for a street-like experience, allow swiping through chronologically-ordered images near the project coordinates.
+
+If you want, I can:
+- Add a richer web map using `react-leaflet` and example markers.
+- Add an in-app photo carousel tied to project locations to simulate a street view using user-submitted photos.
+
+
 ## 🌟 Current Status
 
 ### ✅ Implemented Features
