@@ -1,4 +1,4 @@
-# PostgreSQL Database Configuration for CMD Transparency Platform
+# PostgreSQL Database Configuration for E-निरीक्षण Platform
 
 ## Environment Variables
 

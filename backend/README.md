@@ -1,4 +1,4 @@
-# CMD Transparency Backend API
+# E-निरीक्षण Backend API
 
 > **Government Procurement Transparency Platform**  
 > A comprehensive FastAPI-based backend system for tracking government procurement projects and enabling citizen oversight through reviews and reports.
@@ -26,7 +26,7 @@
 
 ## 🎯 Overview
 
-The CMD Transparency Backend is a comprehensive API system designed to enhance government procurement transparency. It enables citizens to track project progress, submit reviews with photographic evidence, and access detailed procurement information. The system serves as the backbone for democratic oversight of public spending.
+The E-निरीक्षण Backend is a comprehensive API system designed to enhance government procurement transparency. It enables citizens to track project progress, submit reviews with photographic evidence, and access detailed procurement information. The system serves as the backbone for democratic oversight of public spending.
 
 ### Key Objectives
 - **Transparency**: Provide open access to government procurement data

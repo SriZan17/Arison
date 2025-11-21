@@ -301,7 +301,7 @@ async def verify_import():
 
 async def main():
     """Main migration function"""
-    print("🚀 Starting CMD Transparency Database Migration")
+    print("🚀 Starting E-निरीक्षण Database Migration")
     print("=" * 50)
 
     try:

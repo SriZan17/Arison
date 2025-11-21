@@ -20,6 +20,11 @@ alembic==1.13.0
 asyncpg==0.29.0
 psycopg2-binary==2.9.9   # Only needed for synchronous PG tasks
 
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
 # Testing
 pytest==7.4.3
 httpx==0.25.2
