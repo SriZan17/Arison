@@ -62,8 +62,8 @@ def get_rag_retriever():
     print(f"[RAG] Using device for embeddings: {device}")
 
     embedding = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-mpnet-base-v2",
-        model_kwargs={"device": device},
+        model_name="intfloat/multilingual-e5-base",
+        model_kwargs={"device": "cpu"},
     )
 
     rag_vectorstore = Chroma(
