@@ -8,6 +8,7 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from fastapi import HTTPException, status
 import os
+import hashlib
 from app.models.schemas import TokenData
 
 # Security settings
@@ -15,18 +16,45 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production-2024"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24  # 30 days
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing context with bcrypt configuration
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
+
+
+def _preprocess_password(password: str) -> str:
+    """Preprocess password to handle bcrypt 72-byte limit"""
+    # Convert to bytes
+    password_bytes = password.encode("utf-8")
+
+    # If password is longer than 72 bytes, use SHA-256 hash first
+    if len(password_bytes) > 72:
+        # Use SHA-256 to reduce long passwords to a fixed 64-character hex string
+        password_hash = hashlib.sha256(password_bytes).hexdigest()
+        return password_hash
+
+    return password
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against its hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        preprocessed_password = _preprocess_password(plain_password)
+        return pwd_context.verify(preprocessed_password, hashed_password)
+    except Exception as e:
+        print(f"Password verification error: {e}")
+        return False
 
 
 def get_password_hash(password: str) -> str:
     """Generate password hash"""
-    return pwd_context.hash(password)
+    try:
+        preprocessed_password = _preprocess_password(password)
+        return pwd_context.hash(preprocessed_password)
+    except Exception as e:
+        print(f"Password hashing error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Password processing error",
+        )
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
