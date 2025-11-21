@@ -85,7 +85,7 @@ const MainTabNavigator: React.FC = () => {
       <Tab.Screen 
         name="Home" 
         component={HomeScreen}
-        options={{ title: 'CMD Transparency' }}
+        options={{ title: 'E-निरीक्षण' }}
       />
       <Tab.Screen 
         name="Projects" 
@@ -118,9 +118,6 @@ const AppNavigator: React.FC = () => {
         headerTintColor: theme.colors.surface,
         headerTitleStyle: {
           fontWeight: 'bold',
-        },
-        headerSafeAreaInsets: {
-          top: insets.top,
         },
       }}
     >

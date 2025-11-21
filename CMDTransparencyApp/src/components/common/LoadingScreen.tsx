@@ -80,8 +80,8 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
 
         {/* App Name */}
         <Animated.View style={[styles.textContainer, { opacity: textOpacity }]}>
-          <Text style={styles.appName}>Arison</Text>
-          <Text style={styles.subtitle}>CMD Transparency Portal</Text>
+          <Text style={styles.appName}>E-निरीक्षण</Text>
+          <Text style={styles.subtitle}>Government Project Transparency</Text>
         </Animated.View>
 
         {/* Loading Progress */}

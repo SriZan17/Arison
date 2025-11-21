@@ -1,4 +1,4 @@
-# CMD Transparency Mobile App
+# E-निरीक्षण Mobile App
 
 A React Native Expo application for the CMD Government Procurement Transparency Platform, enabling citizens to monitor government projects and submit reports with photographic evidence.
 

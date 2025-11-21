@@ -7,7 +7,7 @@ from pathlib import Path
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="CMD Transparency API",
+    title="E-निरीक्षण API",
     description="API for Government Procurement Transparency Platform - Tracking tender data and project progress",
     version="1.0.0",
     docs_url="/docs",
@@ -51,7 +51,7 @@ app.include_router(reviews.router)
 async def root():
     """Root endpoint - API information"""
     return {
-        "message": "CMD Transparency API",
+        "message": "E-निरीक्षण API",
         "description": "Government Procurement Transparency Platform",
         "version": "1.0.0",
         "docs": "/docs",
