@@ -1,5 +1,5 @@
 # CMD Transparency Backend - Requirements
-# FastAPI Backend for Government Procurement Transparency Platform
+# Modern FastAPI Backend for Government Procurement Transparency Platform
 
 # Core Framework
 fastapi==0.104.1
@@ -14,14 +14,12 @@ python-multipart==0.0.6
 aiofiles==23.2.1
 pillow==10.4.0
 
-# Optional: Database support (for future use)
-# sqlalchemy==2.0.23
-# alembic==1.13.0
+# Database (Async SQLAlchemy 2.x)
+sqlalchemy==2.0.23
+alembic==1.13.0
+asyncpg==0.29.0
+psycopg2-binary==2.9.9   # Only needed for synchronous PG tasks
 
-# Optional: Authentication (for future use)
-# python-jose[cryptography]==3.3.0
-# passlib[bcrypt]==1.7.4
-
-# Development Dependencies
+# Testing
 pytest==7.4.3
 httpx==0.25.2

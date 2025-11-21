@@ -1,235 +1,479 @@
-# CMD Transparency - Backend API
+# CMD Transparency Backend API
 
-Government Procurement Transparency Platform - FastAPI Backend
+> **Government Procurement Transparency Platform**  
+> A comprehensive FastAPI-based backend system for tracking government procurement projects and enabling citizen oversight through reviews and reports.
 
-## 🎯 Project Overview
+## 📋 Table of Contents
 
-This is the backend API for the CMD Transparency platform, designed to combat corruption in government procurement by providing transparent access to tender data and enabling citizen monitoring.
+- [Overview](#overview)
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Installation & Setup](#installation--setup)
+- [Database Configuration](#database-configuration)
+- [API Documentation](#api-documentation)
+- [Core Modules](#core-modules)
+- [Database Schema](#database-schema)
+- [Environment Configuration](#environment-configuration)
+- [Running the Application](#running-the-application)
+- [API Endpoints](#api-endpoints)
+- [Data Models](#data-models)
+- [File Upload System](#file-upload-system)
+- [Development Workflow](#development-workflow)
+- [Testing](#testing)
+- [Production Deployment](#production-deployment)
+- [Contributing](#contributing)
+
+## 🎯 Overview
+
+The CMD Transparency Backend is a comprehensive API system designed to enhance government procurement transparency. It enables citizens to track project progress, submit reviews with photographic evidence, and access detailed procurement information. The system serves as the backbone for democratic oversight of public spending.
+
+### Key Objectives
+- **Transparency**: Provide open access to government procurement data
+- **Accountability**: Enable citizen reporting and verification
+- **Efficiency**: Streamline procurement monitoring processes
+- **Data Integrity**: Maintain accurate and verifiable project records
+
+## ✨ Features
+
+### 🏗️ **Project Management**
+- Complete procurement project lifecycle tracking
+- Advanced filtering by ministry, status, fiscal year, and budget
+- Real-time progress monitoring with percentage completion
+- Contractor and timeline management
+- Budget analysis and financial oversight
+
+### 👥 **Citizen Engagement**
+- Anonymous and named citizen reporting system
+- Multi-image upload support (up to 5 images per report)
+- Geolocation tagging for on-site verification
+- Quality rating system (1-5 stars)
+- Review categorization (Progress Update, Quality Issue, etc.)
+
+### 📊 **Analytics & Statistics**
+- Real-time dashboard metrics
+- Project completion analytics
+- Ministry-wise spending breakdown
+- Citizen engagement statistics
+- Quality rating aggregations
+
+### 🔐 **Data Security**
+- Input validation and sanitization
+- File upload restrictions and validation
+- SQL injection prevention
+- CORS security configuration
+
+## 🛠️ Technology Stack
+
+### **Backend Framework**
+- **FastAPI 0.104.1** - Modern, fast web framework for APIs
+- **Python 3.8+** - Programming language
+- **Uvicorn** - ASGI server for production deployment
+
+### **Database**
+- **PostgreSQL** - Primary database for data persistence
+- **SQLAlchemy** - ORM for database operations
+- **Alembic** - Database migration management
+- **asyncpg** - Async PostgreSQL driver
+
+### **File Handling**
+- **aiofiles** - Async file operations
+- **python-multipart** - Multipart form data handling
+
+### **Data Validation**
+- **Pydantic** - Data validation and serialization
+- **Python-dotenv** - Environment variable management
 
 ## 📁 Project Structure
 
 ```
 backend/
 ├── app/
-│   ├── ____init____.py
+│   ├── __init__.py
 │   ├── main.py                 # FastAPI application entry point
+│   ├── database/
+│   │   ├── __init__.py
+│   │   ├── config.py           # Database configuration
+│   │   ├── models.py           # SQLAlchemy ORM models
+│   │   └── service.py          # Database service layer
 │   ├── models/
 │   │   ├── __init__.py
-│   │   └── schemas.py          # Pydantic models for data validation
+│   │   └── schemas.py          # Pydantic models for API
 │   ├── routers/
 │   │   ├── __init__.py
-│   │   └── projects.py         # API endpoints for procurement projects
+│   │   ├── projects.py         # Project management endpoints
+│   │   └── reviews.py          # Citizen review endpoints
 │   └── data/
 │       ├── __init__.py
-│       └── mock_data.py        # Mock procurement data (6 projects)
-├── requirements.txt            # Python dependencies
-└── README.md                   # This file
+│       └── mock_data.py        # Sample data for development
+├── uploads/                    # File upload directory
+│   └── reviews/               # Review images storage
+├── migrate_database.py         # Database migration script
+├── requirements.txt           # Python dependencies
+├── .env                      # Environment variables
+├── .gitignore               # Git ignore rules
+└── README.md               # This documentation
 ```
 
-## 🚀 Features
-
-### Core Functionality
-- **Procurement Data Aggregation**: Clean API for government tender data
-- **Advanced Filtering**: Filter by ministry, status, fiscal year, budget range
-- **Progress Tracking**: Real-time project completion percentage
-- **Citizen Reporting**: Allow citizens to report and verify project status
-- **Statistics Dashboard**: Overview metrics and analytics
-
-### API Endpoints
-
-#### Projects
-- `GET /api/projects/` - Get all projects with filters
-- `GET /api/projects/{id}` - Get specific project details
-- `GET /api/projects/{id}/progress` - Get project progress tracking
-- `GET /api/projects/{id}/reports` - Get citizen reports for a project
-- `POST /api/projects/{id}/report` - Submit a citizen report
-- `GET /api/projects/stats/overview` - Get overall statistics
-- `GET /api/projects/filters/options` - Get available filter options
-
-## 🛠️ Installation & Setup
+## 🚀 Installation & Setup
 
 ### Prerequisites
-- Python 3.8+
-- pip (Python package manager)
+- Python 3.8 or higher
+- PostgreSQL 12 or higher
+- Git
 
-### Step 1: Navigate to Backend Directory
+### 1. Clone the Repository
 ```bash
-cd backend
+git clone https://github.com/SriZan17/Arison.git
+cd Arison/backend
 ```
 
-### Step 2: Create Virtual Environment (Recommended)
+### 2. Create Virtual Environment
 ```bash
-# Windows
 python -m venv venv
+
+# Windows
 venv\Scripts\activate
 
-# Linux/Mac
-python3 -m venv venv
+# macOS/Linux
 source venv/bin/activate
 ```
 
-### Step 3: Install Dependencies
+### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### Step 4: Run the Server
-```bash
-# Option 1: Using uvicorn directly
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+### 4. Environment Configuration
+Create a `.env` file in the backend directory:
+```env
+# Database Configuration
+DATABASE_URL=postgresql://username:password@localhost:5432/cmd_transparency
+POSTGRES_USER=your_username
+POSTGRES_PASSWORD=your_password
+POSTGRES_DB=cmd_transparency
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
 
-# Option 2: Using Python
-python -m uvicorn app.main:app --reload
+# Application Settings
+DEBUG=True
+SECRET_KEY=your-secret-key-here
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# File Upload Settings
+UPLOAD_MAX_SIZE=10485760  # 10MB in bytes
+ALLOWED_IMAGE_TYPES=jpg,jpeg,png,gif,webp
 ```
 
-The API will be available at: `http://localhost:8000`
+## 🗄️ Database Configuration
 
-## 📚 API Documentation
+### PostgreSQL Setup
+1. **Install PostgreSQL** on your system
+2. **Create Database**:
+```sql
+CREATE DATABASE cmd_transparency;
+CREATE USER cmd_user WITH PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON DATABASE cmd_transparency TO cmd_user;
+```
 
-Once the server is running, access interactive documentation:
+3. **Run Migration**:
+```bash
+python migrate_database.py
+```
 
+This will create all tables and import sample data including:
+- 6 government projects across different ministries
+- 6 citizen reports with various review types
+- 5 ministry records
+- Project statistics and analytics
+
+## 📖 API Documentation
+
+### Interactive Documentation
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
-## 🧪 Testing the API
+### Base URL
+- **Development**: `http://localhost:8000`
 
-### Using cURL
+## 🔧 Core Modules
 
-**Get all projects:**
+### 1. **Database Service Layer** (`app/database/service.py`)
+Handles all database operations with optimized async queries:
+
+```python
+class DatabaseService:
+    @staticmethod
+    async def get_all_projects(ministry=None, status=None, ...)
+    @staticmethod
+    async def get_project_by_id(project_id: str)
+    @staticmethod
+    async def create_citizen_report(...)
+    @staticmethod
+    async def get_project_statistics(project_id: str)
+```
+
+### 2. **Projects Router** (`app/routers/projects.py`)
+Manages government procurement projects:
+- Project listing with advanced filters
+- Individual project details
+- Progress tracking
+- Citizen report submission
+- Statistical overviews
+
+### 3. **Reviews Router** (`app/routers/reviews.py`)
+Handles citizen engagement features:
+- Image upload (single and multiple)
+- Review submission with images
+- Review analytics and summaries
+- Image retrieval and management
+
+## 🗃️ Database Schema
+
+### **Projects Table**
+```sql
+CREATE TABLE projects (
+    id VARCHAR(50) PRIMARY KEY,
+    fiscal_year VARCHAR(10) NOT NULL,
+    ministry VARCHAR(255) NOT NULL,
+    budget_subtitle VARCHAR(500),
+    procurement_plan JSONB NOT NULL,
+    signatures JSONB,
+    status VARCHAR(50) NOT NULL,
+    progress_percentage DECIMAL(5,2) DEFAULT 0,
+    location JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### **Citizen Reports Table**
+```sql
+CREATE TABLE citizen_reports (
+    id SERIAL PRIMARY KEY,
+    review_id VARCHAR(50) UNIQUE NOT NULL,
+    project_id VARCHAR(50) REFERENCES projects(id),
+    reporter_name VARCHAR(255),
+    reporter_contact VARCHAR(255),
+    review_type VARCHAR(100) NOT NULL,
+    review_text TEXT NOT NULL,
+    work_completed BOOLEAN DEFAULT FALSE,
+    quality_rating INTEGER CHECK (quality_rating >= 1 AND quality_rating <= 5),
+    geolocation JSONB,
+    photo_urls JSONB,
+    verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### **Ministries Table**
+```sql
+CREATE TABLE ministries (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(20) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### **Project Statistics Table**
+```sql
+CREATE TABLE project_statistics (
+    project_id VARCHAR(50) PRIMARY KEY REFERENCES projects(id),
+    total_reviews INTEGER DEFAULT 0,
+    work_completed_percentage DECIMAL(5,2) DEFAULT 0,
+    average_quality_rating DECIMAL(3,2),
+    reviews_with_images INTEGER DEFAULT 0,
+    verified_reviews INTEGER DEFAULT 0,
+    progress_updates INTEGER DEFAULT 0,
+    quality_issues INTEGER DEFAULT 0,
+    completion_verifications INTEGER DEFAULT 0,
+    delay_reports INTEGER DEFAULT 0,
+    fraud_alerts INTEGER DEFAULT 0,
+    last_calculated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## 🏃‍♂️ Running the Application
+
+### Development Mode
 ```bash
+# Start with auto-reload
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Or use the main.py directly
+python app/main.py
+```
+
+### Production Mode
+```bash
+# Start with optimized settings
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+### Health Check
+Visit `http://localhost:8000/health` to verify the application is running.
+
+## 🛣️ API Endpoints
+
+### **Projects API**
+
+#### `GET /api/projects/`
+Get all projects with filtering options.
+
+**Query Parameters:**
+- `ministry` (string): Filter by ministry name
+- `status` (enum): Filter by project status
+- `fiscal_year` (string): Filter by fiscal year
+- `min_amount` (float): Minimum contract amount
+- `max_amount` (float): Maximum contract amount
+- `search` (string): Search in project details
+
+**Example:**
+```bash
+curl "http://localhost:8000/api/projects/?ministry=Health&status=In Progress&min_amount=50000"
+```
+
+#### `GET /api/projects/{project_id}`
+Get detailed information about a specific project.
+
+#### `GET /api/projects/{project_id}/progress`
+Get progress tracking information for a project.
+
+#### `POST /api/projects/{project_id}/report`
+Submit a citizen report for a project.
+
+#### `GET /api/projects/{project_id}/reports`
+Get all citizen reports for a specific project.
+
+#### `GET /api/projects/stats/overview`
+Get overall platform statistics.
+
+#### `GET /api/projects/filters/options`
+Get available filter options for the frontend.
+
+### **Reviews API**
+
+#### `POST /api/reviews/upload-image`
+Upload a single image for a review.
+
+#### `POST /api/reviews/upload-images`
+Upload multiple images (up to 5) for a review.
+
+#### `POST /api/reviews/{project_id}/submit`
+Submit a complete citizen review with optional images.
+
+#### `GET /api/reviews/image/{filename}`
+Retrieve an uploaded review image.
+
+#### `GET /api/reviews/{project_id}/all`
+Get all reviews for a specific project.
+
+#### `GET /api/reviews/{project_id}/summary`
+Get summary statistics of reviews for a project.
+
+#### `DELETE /api/reviews/image/{filename}`
+Delete an uploaded review image.
+
+## 📁 File Upload System
+
+### **Configuration**
+- **Maximum file size**: 10MB per image
+- **Allowed formats**: JPG, JPEG, PNG, GIF, WebP
+- **Storage location**: `uploads/reviews/` directory
+- **Naming convention**: UUID-based unique filenames
+
+### **Security Measures**
+- File extension validation
+- File size limits
+- Content type checking
+- Unique filename generation to prevent conflicts
+- Directory traversal protection
+
+## 🧪 Testing
+
+### **API Testing**
+```bash
+# Test health endpoint
+curl http://localhost:8000/health
+
+# Test projects endpoint
 curl http://localhost:8000/api/projects/
+
+# Test with filters
+curl "http://localhost:8000/api/projects/?ministry=Health&status=In Progress"
 ```
 
-**Filter by ministry:**
-```bash
-curl "http://localhost:8000/api/projects/?ministry=Ministry%20of%20Health"
+## 🚀 Production Deployment
+
+### **Docker Deployment**
+```dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
-
-**Get project progress:**
-```bash
-curl http://localhost:8000/api/projects/PRJ-2087-001/progress
-```
-
-**Get statistics:**
-```bash
-curl http://localhost:8000/api/projects/stats/overview
-```
-
-### Using Python requests
-```python
-import requests
-
-# Get all projects
-response = requests.get("http://localhost:8000/api/projects/")
-projects = response.json()
-
-# Filter by status
-response = requests.get("http://localhost:8000/api/projects/?status=In%20Progress")
-in_progress = response.json()
-
-# Submit citizen report
-report_data = {
-    "project_id": "PRJ-2087-001",
-    "reporter_name": "John Doe",
-    "report_text": "Construction work is progressing well",
-    "timestamp": "2025-11-20T10:00:00"
-}
-response = requests.post(
-    "http://localhost:8000/api/projects/PRJ-2087-001/report",
-    json=report_data
-)
-```
-
-## 📊 Mock Data
-
-The system includes 6 sample projects:
-
-1. **Water Supply Project** - Likhu Tamakoshi (35% complete, In Progress)
-2. **Health Center Construction** - Bhaktapur (60% complete, In Progress)
-3. **School Building** - Chitwan (100% complete, Completed)
-4. **Highway Construction** - Pokhara-Baglung (20% complete, Delayed)
-5. **Irrigation Canal** - Bardiya (15% complete, In Progress)
-6. **Hospital Equipment** - Karnali (75% complete, Disputed)
-
-Each project includes:
-- Complete procurement details
-- Timeline information
-- Contractor details
-- Location (lat/lng)
-- Citizen reports
-- Progress percentage
-
-## 🎨 Key Features for Hackathon Demo
-
-### 1. Ministry Filtering
-```python
-# Filter by specific ministry
-GET /api/projects/?ministry=Ministry of Health
-```
-
-### 2. Progress Tracking
-```python
-# Track project lifecycle
-GET /api/projects/PRJ-2087-001/progress
-# Returns: status, percentage, timeline, contractor
-```
-
-### 3. Citizen Verification
-```python
-# Citizens can report discrepancies
-POST /api/projects/PRJ-2087-001/report
-{
-  "report_text": "Road construction not started yet",
-  "photo_url": "...",
-  "geolocation": {"lat": 27.69, "lng": 86.06}
-}
-```
-
-### 4. Status Breakdown
-```python
-# Get overview statistics
-GET /api/projects/stats/overview
-# Returns: total projects, budget, status breakdown
-```
-
-## 🔐 Future Enhancements
-
-- [ ] Database integration (PostgreSQL/MongoDB)
-- [ ] User authentication & authorization
-- [ ] Image upload for citizen reports
-- [ ] Real-time notifications
-- [ ] Data scraping from government portals
-- [ ] Advanced analytics and ML for fraud detection
-- [ ] Email alerts for project delays
 
 ## 🤝 Contributing
 
-This is a hackathon project. For improvements:
+### **Development Setup**
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Make your changes
-4. Submit a pull request
+4. Run tests: `pytest`
+5. Format code: `black app/`
+6. Commit changes: `git commit -m 'Add amazing feature'`
+7. Push to branch: `git push origin feature/amazing-feature`
+8. Open a Pull Request
 
-## 📝 License
+## 📈 Current Status
 
-See LICENSE file in the root directory.
+### **✅ Implemented Features**
+- ✅ Complete FastAPI backend with PostgreSQL integration
+- ✅ Advanced project filtering and search
+- ✅ Multi-image upload system for citizen reviews
+- ✅ Real-time statistics and analytics
+- ✅ Comprehensive API documentation
+- ✅ Database migration system with sample data
 
-## 🎤 Hackathon Pitch Points
+### **🔄 Database Integration**
+- ✅ **Projects**: Fully database-backed with PostgreSQL
+- ✅ **Citizen Reports**: Stored in database with image paths
+- ✅ **Statistics**: Real-time calculation from live data
+- ✅ **Ministries**: Database-sourced ministry list
+- ✅ **File Uploads**: Integrated with database records
 
-When presenting this project:
+### **📊 Sample Data**
+The system includes 6 comprehensive projects:
+1. **PRJ-2087-001** - Rural Health Center Construction (35% complete)
+2. **PRJ-2087-002** - Urban Water Supply System (60% complete)
+3. **PRJ-2087-003** - Primary School Building (100% complete)
+4. **PRJ-2087-004** - Highway Expansion Project (20% complete)
+5. **PRJ-2087-005** - Irrigation Canal Development (15% complete)
+6. **PRJ-2087-006** - Hospital Equipment Procurement (75% complete)
 
-1. **The Problem**: "Government says project is 100% done, but citizens see an empty field"
-2. **The Gap**: "We have Open Data, but not Open Monitoring"
-3. **The Solution**: "Real-time citizen verification with geolocation proof"
-4. **The Impact**: "Crowdsourced anti-corruption monitoring"
+## 📞 Support
 
-## 👥 Team
-
-Built for the CMD Transparency Hackathon
+For technical support or questions:
+- **Documentation**: [API Docs](http://localhost:8000/docs)
+- **Issue Tracker**: [GitHub Issues](https://github.com/SriZan17/Arison/issues)
 
 ---
 
-**API Status**: ✅ Ready for Integration
-**Data**: ✅ Mock data loaded (6 projects)
-**Documentation**: ✅ Swagger UI available
-**CORS**: ✅ Enabled for frontend integration
+**🎯 API Status**: ✅ Production Ready with Full Database Integration  
+**📊 Data**: ✅ PostgreSQL with 6 projects, 6 reports, 5 ministries  
+**📚 Documentation**: ✅ Comprehensive API documentation available  
+**🔄 CORS**: ✅ Enabled for frontend integration  
+**📁 File Uploads**: ✅ Multi-image support with database integration  
+
+*Built with ❤️ for Government Transparency and Democratic Oversight*

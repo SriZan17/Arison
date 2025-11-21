@@ -6,13 +6,7 @@ from app.models.schemas import (
     ProjectStatus,
     ProcurementMethod,
 )
-from app.data.mock_data import (
-    get_all_projects,
-    get_project_by_id,
-    get_ministries,
-    get_fiscal_years,
-    mock_projects,
-)
+from app.database.service import DatabaseService
 from datetime import datetime
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -39,42 +33,14 @@ async def get_projects(
     - Contract Amount Range
     - Text Search
     """
-    projects = get_all_projects()
-
-    # Apply filters
-    if ministry:
-        projects = [p for p in projects if ministry.lower() in p["ministry"].lower()]
-
-    if status:
-        projects = [p for p in projects if p["status"] == status]
-
-    if fiscal_year:
-        projects = [p for p in projects if p["fiscal_year"] == fiscal_year]
-
-    if min_amount:
-        projects = [
-            p
-            for p in projects
-            if p["procurement_plan"].get("contract_amount")
-            and p["procurement_plan"]["contract_amount"] >= min_amount
-        ]
-
-    if max_amount:
-        projects = [
-            p
-            for p in projects
-            if p["procurement_plan"].get("contract_amount")
-            and p["procurement_plan"]["contract_amount"] <= max_amount
-        ]
-
-    if search:
-        search_lower = search.lower()
-        projects = [
-            p
-            for p in projects
-            if search_lower in p["procurement_plan"]["details_of_work"].lower()
-            or search_lower in p["ministry"].lower()
-        ]
+    projects = await DatabaseService.get_all_projects(
+        ministry=ministry,
+        status=status.value if status else None,
+        fiscal_year=fiscal_year,
+        min_amount=min_amount,
+        max_amount=max_amount,
+        search=search,
+    )
 
     return projects
 
@@ -91,7 +57,7 @@ async def get_project(project_id: str):
     - Citizen reports
     - Location data
     """
-    project = get_project_by_id(project_id)
+    project = await DatabaseService.get_project_by_id(project_id)
 
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
@@ -110,7 +76,7 @@ async def get_project_progress(project_id: str):
     - Timeline milestones
     - Delays (if any)
     """
-    project = get_project_by_id(project_id)
+    project = await DatabaseService.get_project_by_id(project_id)
 
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
@@ -141,23 +107,29 @@ async def submit_citizen_report(project_id: str, report: CitizenReport):
     Allows citizens to report on project progress, quality issues,
     or discrepancies between official status and ground reality.
     """
-    project = get_project_by_id(project_id)
+    project = await DatabaseService.get_project_by_id(project_id)
 
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
-    # In a real app, this would save to a database
-    new_report = {
-        "reporter_name": report.reporter_name,
-        "report_text": report.report_text,
-        "photo_url": report.photo_url,
-        "geolocation": report.geolocation,
-        "timestamp": report.timestamp,
-        "verified": report.verified,
-    }
+    # Generate unique review ID
+    import uuid
 
-    # Add to the mock data (in-memory for demo)
-    project["citizen_reports"].append(new_report)
+    review_id = f"REV-{uuid.uuid4().hex[:8].upper()}"
+
+    # Create report in database
+    new_report = await DatabaseService.create_citizen_report(
+        review_id=review_id,
+        project_id=project_id,
+        reporter_name=report.reporter_name,
+        reporter_contact=None,
+        review_type="Citizen Report",
+        review_text=report.report_text,
+        work_completed=True,
+        quality_rating=None,
+        geolocation=report.geolocation,
+        photo_urls=[report.photo_url] if report.photo_url else [],
+    )
 
     return {"message": "Report submitted successfully", "report": new_report}
 
@@ -169,12 +141,13 @@ async def get_project_reports(project_id: str):
 
     Returns a list of reports with verification status.
     """
-    project = get_project_by_id(project_id)
+    project = await DatabaseService.get_project_by_id(project_id)
 
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
-    return project.get("citizen_reports", [])
+    reports = await DatabaseService.get_project_reports(project_id)
+    return reports
 
 
 @router.get("/stats/overview", response_model=dict)
@@ -184,27 +157,8 @@ async def get_statistics():
 
     Provides summary metrics for dashboard visualization.
     """
-    projects = get_all_projects()
-
-    total_amount = sum(
-        p["procurement_plan"].get("contract_amount", 0) for p in projects
-    )
-
-    status_counts = {}
-    for project in projects:
-        status = project["status"]
-        status_counts[status] = status_counts.get(status, 0) + 1
-
-    avg_progress = sum(p["progress_percentage"] for p in projects) / len(projects)
-
-    return {
-        "total_projects": len(projects),
-        "total_contract_value": total_amount,
-        "average_progress": round(avg_progress, 2),
-        "status_breakdown": status_counts,
-        "ministries_count": len(get_ministries()),
-        "fiscal_years": get_fiscal_years(),
-    }
+    stats = await DatabaseService.get_overall_statistics()
+    return stats
 
 
 @router.get("/filters/options", response_model=dict)
@@ -218,9 +172,12 @@ async def get_filter_options():
     - Status options
     - Procurement methods
     """
+    stats = await DatabaseService.get_overall_statistics()
+    ministries = await DatabaseService.get_ministries()
+
     return {
-        "ministries": get_ministries(),
-        "fiscal_years": get_fiscal_years(),
+        "ministries": ministries,
+        "fiscal_years": stats["fiscal_years"],
         "statuses": [status.value for status in ProjectStatus],
         "procurement_methods": [method.value for method in ProcurementMethod],
     }
