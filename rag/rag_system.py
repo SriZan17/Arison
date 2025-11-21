@@ -7,10 +7,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 
-# -------------------------------------------------------------------
-# Helpers
-# -------------------------------------------------------------------
-
 def load_pdfs(filepaths):
     """Loads PDFs but logs empty PDFs to empty.txt."""
     documents = []
@@ -26,7 +22,7 @@ def load_pdfs(filepaths):
 
             # If PDF parses but contains no text/pages
             if not docs:
-                print(f"⚠️  {filename} has 0 pages. Logging to {empty_log_path}")
+                print(f"{filename} has 0 pages. Logging to {empty_log_path}")
                 with open(empty_log_path, "a", encoding="utf-8") as f:
                     f.write(filename + "\n")
                 continue
@@ -63,14 +59,21 @@ def save_pdf_state(state_path, state):
         json.dump(state, f, indent=2)
 
 
-def find_new_or_updated_pdfs(pdf_dir, state):
+def find_new_or_updated_pdfs(pdf_dir, state, empty_log_path="empty.txt"):
     """
     Compare files in `pdf_dir` against recorded state.
+    Skips any PDFs listed in empty.txt.
 
     Returns:
       - list of tuples: (full_path, filename, mtime)
     """
     new_files = []
+
+    # Load list of permanently skipped (empty) PDFs
+    empty_skip_list = set()
+    if os.path.exists(empty_log_path):
+        with open(empty_log_path, "r", encoding="utf-8") as f:
+            empty_skip_list = {line.strip() for line in f if line.strip()}
 
     if not os.path.exists(pdf_dir):
         print(f"Directory {pdf_dir} does not exist.")
@@ -78,6 +81,10 @@ def find_new_or_updated_pdfs(pdf_dir, state):
 
     for filename in os.listdir(pdf_dir):
         if not filename.lower().endswith(".pdf"):
+            continue
+
+        if filename in empty_skip_list:
+            print(f"Skipping {filename} (listed in empty.txt)")
             continue
 
         full_path = os.path.join(pdf_dir, filename)
@@ -93,20 +100,10 @@ def find_new_or_updated_pdfs(pdf_dir, state):
 
     return new_files
 
-
-# -------------------------------------------------------------------
-# Main
-# -------------------------------------------------------------------
-
 def main():
     load_dotenv()
-    # OPENAI_API_KEY only needed if you use ChatOpenAI elsewhere;
-    # kept here in case you extend later.
-    if not os.getenv("OPENAI_API_KEY"):
-        print("Error: OPENAI_API_KEY not found in .env file")
-        sys.exit(1)
 
-    pdf_dir = "pdf2"
+    pdf_dir = "pdfs"
     persist_directory = "./chroma_db"
     state_file = "./chroma_db/pdf_state.json"
     empty_log_path = "empty.txt"
@@ -147,7 +144,7 @@ def main():
         )
 
         for full_path, filename, mtime in new_files:
-            print(f"\n🔹 Processing file: {filename}")
+            print(f"\n Processing file: {filename}")
 
             documents = load_pdfs([full_path])
             if not documents:
@@ -161,7 +158,7 @@ def main():
 
             # If there are no chunks (e.g. scanned/image-only PDF), skip and log
             if not splits:
-                print(f"⚠️  {filename} produced 0 chunks. Logging to {empty_log_path} and skipping.")
+                print(f"  {filename} produced 0 chunks. Logging to {empty_log_path} and skipping.")
                 with open(empty_log_path, "a", encoding="utf-8") as f:
                     f.write(filename + "\n")
                 continue  # do NOT call add_documents
@@ -172,7 +169,7 @@ def main():
             # Update state for THIS file only and save
             pdf_state[filename] = {"mtime": mtime}
             save_pdf_state(state_file, pdf_state)
-            print(f"✅ Finished {filename} and updated state.")
+            print(f"Finished {filename} and updated state.")
 
     print("\nRAG System Ready! (Vector store updated.)\n")
 
