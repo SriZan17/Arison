@@ -1,89 +1,227 @@
 import os
-import sys
-from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain_chroma import Chroma
-from langchain.chains import RetrievalQA
+import json
 
-# Load environment variables
+import openai
+import torch
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
+
+# -------------------------------------------------------------------
+# FastAPI setup
+# -------------------------------------------------------------------
+
 load_dotenv()
 
-if not os.getenv("OPENAI_API_KEY"):
-    print("Error: OPENAI_API_KEY not found in .env file")
-    sys.exit(1)
+app = FastAPI(
+    title="RAG Chat API",
+    version="0.1.0",
+    docs_url="/",  # swagger at root, like your working app
+)
 
-app = FastAPI(title="RAG Chat API")
 
-# Global variables for the chain
-qa_chain = None
+# -------------------------------------------------------------------
+# RAG globals
+# -------------------------------------------------------------------
 
-def get_qa_chain():
-    global qa_chain
-    if qa_chain:
-        return qa_chain
-    
-    persist_directory = "./chroma_db"
-    
-    if not os.path.exists(persist_directory):
-        raise RuntimeError(f"Vector DB not found at {persist_directory}. Please run ingest_pdfs.py first.")
+RAG_PERSIST_DIR = "./chroma_db"
 
-    print("Loading vector store...")
-    embedding = OpenAIEmbeddings()
-    vectorstore = Chroma(
-        persist_directory=persist_directory,
-        embedding_function=embedding
+rag_vectorstore = None
+rag_retriever = None
+
+
+def get_openai_api_key() -> str:
+    """Use MATE if set, otherwise fall back to OPENAI_API_KEY."""
+    key = os.getenv("MATE") or os.getenv("OPENAI_API_KEY")
+    if not key:
+        raise HTTPException(
+            status_code=500,
+            detail="No API key found. Set MATE or OPENAI_API_KEY in your .env.",
+        )
+    return key
+
+
+def get_rag_retriever():
+    """Lazy-load Chroma + HuggingFaceEmbeddings and return a retriever."""
+    global rag_vectorstore, rag_retriever
+
+    if rag_retriever is not None:
+        return rag_retriever
+
+    if not os.path.exists(RAG_PERSIST_DIR):
+        raise HTTPException(
+            status_code=500,
+            detail=f"Vector DB not found at {RAG_PERSIST_DIR}. Run your ingestion script first.",
+        )
+
+    # Use same embedding model/config as ingestion
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"[RAG] Using device for embeddings: {device}")
+
+    embedding = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-mpnet-base-v2",
+        model_kwargs={"device": device},
     )
-    
-    print("Creating retrieval chain...")
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=vectorstore.as_retriever(search_kwargs={"k": 3}),
-        return_source_documents=True
+
+    rag_vectorstore = Chroma(
+        persist_directory=RAG_PERSIST_DIR,
+        embedding_function=embedding,
     )
-    return qa_chain
+
+    rag_retriever = rag_vectorstore.as_retriever(search_kwargs={"k": 3})
+    print("[RAG] Retriever initialized.")
+    return rag_retriever
+
+
+def _latest_user_text(messages) -> str:
+    """Extract latest user message content from chat history."""
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            return (m.get("content") or "").strip()
+    return ""
+
+
+def _format_context(docs) -> str:
+    """Turn Chroma documents into a context block for the system prompt."""
+    parts = []
+    for d in docs:
+        source = d.metadata.get("source", "Unknown")
+        page = d.metadata.get("page", "Unknown")
+        parts.append(
+            f"Source: {source}, Page: {page}\n{d.page_content}"
+        )
+    return "\n\n---\n\n".join(parts)
+
+
+# -------------------------------------------------------------------
+# Startup (optional pre-load)
+# -------------------------------------------------------------------
 
 @app.on_event("startup")
 async def startup_event():
     try:
-        get_qa_chain()
+        get_rag_retriever()
+        print("[RAG] Startup: retriever ready.")
     except Exception as e:
-        print(f"Failed to initialize QA chain: {e}")
+        # Don't crash on startup; endpoint will still try to initialize later
+        print(f"[RAG] Failed to initialize retriever on startup: {e}")
 
-class Query(BaseModel):
-    question: str
 
-class Source(BaseModel):
-    source: str
-    page: int
+# -------------------------------------------------------------------
+# RAG chatbot endpoint
+# -------------------------------------------------------------------
 
-class Answer(BaseModel):
-    result: str
-    sources: list[Source]
+@app.post("/chatbot")
+async def rag_chatbot_endpoint(request: Request):
+    """
+    RAG-enabled chatbot.
 
-@app.post("/chat", response_model=Answer)
-async def chat(query: Query):
-    chain = get_qa_chain()
-    if not chain:
-        raise HTTPException(status_code=500, detail="RAG system not initialized")
-    
+    Request JSON:
+      {
+        "messages": [
+          {"role": "user", "content": "..."}, ...
+        ]
+      }
+
+    Response JSON:
+      {
+        "messages": [..., {"role": "assistant", "content": "..."}],
+        "sources": [
+          {"source": "file.pdf", "page": 3},
+          ...
+        ]
+      }
+    """
     try:
-        result = chain.invoke({"query": query.question})
-        
-        sources = []
-        for doc in result.get('source_documents', []):
-            sources.append(Source(
-                source=doc.metadata.get('source', 'Unknown'),
-                page=doc.metadata.get('page', -1)
-            ))
-            
-        return Answer(result=result['result'], sources=sources)
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    messages = data.get("messages")
+    if messages is None or not isinstance(messages, list) or not messages:
+        raise HTTPException(
+            status_code=400,
+            detail="'messages' must be a non-empty list of chat messages.",
+        )
+
+    # Extract latest user query
+    query = _latest_user_text(messages)
+    if not query:
+        raise HTTPException(
+            status_code=400,
+            detail="No user message found in 'messages'.",
+        )
+
+    # Get retriever and fetch context
+    retriever = get_rag_retriever()
+    try:
+        docs = retriever.invoke(query)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving context from vector DB: {e}",
+        )
+
+    context_text = _format_context(docs)
+
+    # Build RAG-aware system prompt
+    system_prompt = (
+        "You are a retrieval-augmented assistant.\n"
+        "You answer questions using ONLY the context provided below.\n"
+        "If the answer is not clearly supported by the context, say you don't know.\n\n"
+        "CONTEXT:\n"
+        f"{context_text}\n\n"
+        "When you answer, be clear and concise. If relevant, mention which section or law you are referring to."
+    )
+
+    # Compose final messages: system + existing conversation
+    full_messages = [
+        {"role": "system", "content": system_prompt},
+    ] + messages
+
+    # Call OpenAI with your existing helper
+    api_key = get_openai_api_key()
+    client = openai.OpenAI(api_key=api_key)
+
+    try:
+        reply = get_ai_explanation_chat(client, full_messages)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OpenAI error: {e}")
+
+    # Append the assistant's reply to the conversation
+    messages.append({"role": "assistant", "content": reply})
+
+    # Prepare sources as a separate list (for UI if needed)
+    sources = []
+    for d in docs:
+        sources.append(
+            {
+                "source": d.metadata.get("source", "Unknown"),
+                "page": d.metadata.get("page", -1),
+            }
+        )
+
+    return JSONResponse({"messages": messages, "sources": sources})
+
+def get_ai_explanation_chat(client: openai.OpenAI, messages: list) -> str:
+    user_message_count = sum(1 for msg in messages if msg.get("role") == "user")
+    if user_message_count > 11:
+        return "Usage limit reached. You have exceeded the maximum number of questions per session."
+    try:
+        resp = client.chat.completions.create(
+            model="gpt-5.1-mini",
+            messages=messages,
+            top_p=1,
+            presence_penalty=0,
+            frequency_penalty=0,
+        )
+        return resp.choices[0].message.content
+    except openai.OpenAIError as e:
+        raise RuntimeError(f"OpenAI API error: {e}")
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
