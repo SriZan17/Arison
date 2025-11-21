@@ -203,7 +203,6 @@ async def submit_review_with_images(
         quality_rating=quality_rating,
         geolocation=geolocation,
         photo_urls=uploaded_image_paths,
-        user_id=current_user.id if current_user else None,
     )
 
     return ReviewSubmissionResponse(

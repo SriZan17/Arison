@@ -8,7 +8,7 @@ from datetime import timedelta
 from typing import List
 
 from app.models.schemas import UserCreate, UserLogin, Token, User, UserInDB
-from app.auth.service import (
+from app.auth.service_db import (
     create_user,
     authenticate_user,
     get_all_users,
@@ -34,7 +34,7 @@ router = APIRouter(
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def register_user(user_create: UserCreate):
+def register_user(user_create: UserCreate):
     """
     Register a new user account
     """
@@ -45,7 +45,7 @@ async def register_user(user_create: UserCreate):
         )
 
     # Create user
-    user = await create_user(user_create)
+    user = create_user(user_create)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -59,7 +59,7 @@ async def register_user(user_create: UserCreate):
     )
 
     # Update last login
-    await update_user_last_login(user.id)
+    update_user_last_login(user.id)
 
     return Token(
         access_token=access_token,
@@ -70,12 +70,12 @@ async def register_user(user_create: UserCreate):
 
 
 @router.post("/login", response_model=Token)
-async def login_user(user_login: UserLogin):
+def login_user(user_login: UserLogin):
     """
     User login with email and password
     """
     # Authenticate user
-    user = await authenticate_user(user_login.email, user_login.password)
+    user = authenticate_user(user_login.email, user_login.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -110,7 +110,7 @@ async def login_user(user_login: UserLogin):
 
 
 @router.get("/me", response_model=User)
-async def get_current_user_info(current_user: User = Depends(get_current_active_user)):
+def get_current_user_info(current_user: User = Depends(get_current_active_user)):
     """
     Get current user information
     """
@@ -118,7 +118,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_active_
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh_token(current_user: User = Depends(get_current_active_user)):
+def refresh_token(current_user: User = Depends(get_current_active_user)):
     """
     Refresh access token for authenticated user
     """
@@ -139,19 +139,19 @@ async def refresh_token(current_user: User = Depends(get_current_active_user)):
 
 # Admin routes
 @router.get("/users", response_model=List[User])
-async def get_users(admin_user: User = Depends(get_admin_user)):
+def get_users(admin_user: User = Depends(get_admin_user)):
     """
     Get all users (admin/official only)
     """
-    return await get_all_users()
+    return get_all_users()
 
 
 @router.post("/users/{user_id}/verify", response_model=User)
-async def verify_user_account(user_id: str, admin_user: User = Depends(get_admin_user)):
+def verify_user_account(user_id: str, admin_user: User = Depends(get_admin_user)):
     """
     Verify a user account (admin/official only)
     """
-    user = await verify_user(user_id)
+    user = verify_user(user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
@@ -160,7 +160,7 @@ async def verify_user_account(user_id: str, admin_user: User = Depends(get_admin
 
 
 @router.get("/demo-accounts")
-async def get_demo_accounts():
+def get_demo_accounts():
     """
     Get demo account credentials for testing
     """
