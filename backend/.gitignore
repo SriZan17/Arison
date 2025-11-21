@@ -39,5 +39,10 @@ htmlcov/
 .env
 .env.local
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
 # Uploaded files
 uploads/
