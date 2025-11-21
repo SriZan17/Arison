@@ -127,7 +127,8 @@ def main():
 
     # 2. Initialize embeddings and (possibly existing) vector store
     embedding = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-mpnet-base-v2"
+        model_name="sentence-transformers/all-mpnet-base-v2",
+        model_kwargs={"device": "cpu"},
     )
 
     # This will load existing DB if present, or create a new empty one
