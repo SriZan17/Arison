@@ -22,6 +22,7 @@ from app.database.models import (
     UploadedImage,
 )
 from app.data.mock_data import mock_projects, get_ministries
+from app.auth.service_db import create_demo_users
 import json
 from datetime import datetime
 
@@ -245,6 +246,11 @@ async def import_mock_data():
             )
 
         print(f"✅ Calculated statistics for {len(mock_projects)} projects")
+
+        # 5. Create demo users for authentication testing
+        print("Creating demo users for authentication...")
+        create_demo_users()
+        print("✅ Demo users created successfully!")
 
         print("\n🎉 Mock data import completed successfully!")
         print(f"📊 Database Summary:")

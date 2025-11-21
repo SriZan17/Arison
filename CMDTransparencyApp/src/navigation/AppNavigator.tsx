@@ -12,6 +12,7 @@ import ProjectDetailScreen from '../screens/ProjectDetailScreen';
 import ReviewSubmissionScreen from '../screens/ReviewSubmissionScreen';
 import MapViewScreen from '../screens/MapViewScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreenSimple';
+import IMaanScreen from '../screens/IMaanScreen';
 
 // Navigation
 import AuthNavigator from './AuthNavigator';
@@ -32,6 +33,7 @@ export type MainTabParamList = {
   Projects: undefined;
   Map: undefined;
   Analytics: undefined;
+  IMaan: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -58,6 +60,9 @@ const MainTabNavigator: React.FC = () => {
               break;
             case 'Analytics':
               iconName = focused ? 'stats-chart' : 'stats-chart-outline';
+              break;
+            case 'IMaan':
+              iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
               break;
             default:
               iconName = 'home-outline';
@@ -107,6 +112,11 @@ const MainTabNavigator: React.FC = () => {
         name="Analytics" 
         component={AnalyticsScreen}
         options={{ title: 'Analytics' }}
+      />
+      <Tab.Screen 
+        name="IMaan" 
+        component={IMaanScreen}
+        options={{ title: 'i-maan' }}
       />
     </Tab.Navigator>
   );
