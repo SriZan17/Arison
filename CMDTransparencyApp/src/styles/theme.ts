@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export const theme = {
   colors: {
     primary: '#1E40AF',      // Government blue
@@ -96,6 +98,27 @@ export const theme = {
       elevation: 8,
       boxShadow: '0 4px 8px rgba(0,0,0,0.30)',
     },
+  },
+  // Safe area helpers
+  safeArea: {
+    // Default safe area padding
+    padding: Platform.select({
+      ios: 20,
+      android: 16,
+      default: 16,
+    }),
+    // Status bar height
+    statusBarHeight: Platform.select({
+      ios: 44,
+      android: 24,
+      default: 24,
+    }),
+    // Tab bar height
+    tabBarHeight: Platform.select({
+      ios: 83,
+      android: 60,
+      default: 60,
+    }),
   },
 };
 

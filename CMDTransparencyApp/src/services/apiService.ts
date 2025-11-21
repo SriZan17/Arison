@@ -1,8 +1,19 @@
 import axios, { AxiosResponse } from 'axios';
+import { Platform } from 'react-native';
 import { Project, ProjectFilter, Statistics, FilterOptions, CitizenReport, ReviewSubmission, ReviewSubmissionResponse, ImageUploadResponse, ReviewSummary } from '../types';
 
 // API Configuration
-const API_BASE_URL = __DEV__ ? 'http://localhost:8000' : 'http://localhost:8000';
+const getApiBaseUrl = () => {
+  if (Platform.OS === 'web') {
+    return 'http://localhost:8000';
+  } else {
+    // For mobile devices, use your computer's IP address
+    // Replace 192.168.88.191 with your computer's actual IP address
+    return 'http://192.168.88.191:8000';
+  }
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -174,6 +185,35 @@ export const reviewsApi = {
   deleteImage: async (filename: string): Promise<{ message: string }> => {
     const response = await apiClient.delete(`/api/reviews/image/${filename}`);
     return response.data;
+  },
+
+  // Get proper image URL
+  getImageUrl: (photoUrl: string): string => {
+    // If photoUrl is already a full URL, return as is
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+      return photoUrl;
+    }
+    
+    // Convert Windows backslashes to forward slashes for URLs
+    const normalizedPath = photoUrl.replace(/\\/g, '/');
+    
+    // Get the base URL
+    const baseUrl = getApiBaseUrl();
+    
+    // Handle different possible formats
+    if (normalizedPath.startsWith('/')) {
+      // Already starts with slash
+      return `${baseUrl}${normalizedPath}`;
+    } else if (normalizedPath.startsWith('uploads/')) {
+      // Path like "uploads/reviews/filename.jpg" - this matches your backend format
+      return `${baseUrl}/${normalizedPath}`;
+    } else if (normalizedPath.includes('backend/uploads/')) {
+      // Path like "backend/uploads/filename.jpg"
+      return `${baseUrl}/${normalizedPath}`;
+    } else {
+      // Just filename - construct full path
+      return `${baseUrl}/uploads/reviews/${normalizedPath}`;
+    }
   },
 };
 
