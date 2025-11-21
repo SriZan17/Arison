@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use your local backend URL or deployed URL
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://192.168.88.191:8000';
 // For testing on physical device, use your computer's IP address:
 // const API_BASE_URL = 'http://192.168.1.100:8000';
 

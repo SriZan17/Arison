@@ -2,8 +2,8 @@ import { Platform } from 'react-native';
 
 export const theme = {
   colors: {
-    primary: '#1E40AF',      // Government blue
-    secondary: '#0891B2',    // Transparency teal
+  primary: '#092153',      // Government blue (UPDATED)
+  secondary: '#ea312c',    // Transparency teal (UPDATED)
     success: '#059669',      // Green for completed
     warning: '#D97706',      // Orange for issues
     error: '#DC2626',        // Red for alerts

@@ -5,7 +5,7 @@ import { Project, ProjectFilter, Statistics, FilterOptions, CitizenReport, Revie
 // API Configuration
 const getApiBaseUrl = () => {
   if (Platform.OS === 'web') {
-    return 'http://localhost:8000';
+    return 'http://192.168.88.191:8000';
   } else {
     // For mobile devices, use your computer's IP address
     // Replace 192.168.88.191 with your computer's actual IP address

@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ViewStyle,
+  Platform,
 } from 'react-native';
 import { theme } from '../../styles/theme';
 
@@ -53,7 +54,11 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
-    ...theme.shadows.sm,
+    // react-native-web warns about shadow* props being deprecated on web.
+    // Prefer boxShadow for web while keeping native shadow props for mobile.
+    ...(Platform.OS === 'web'
+      ? { boxShadow: theme.shadows.sm.boxShadow }
+      : theme.shadows.sm),
   },
   header: {
     marginBottom: theme.spacing.md,
