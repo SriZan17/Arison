@@ -4,13 +4,16 @@ import json
 from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import ChatOpenAI
 from langchain_chroma import Chroma
-from langchain_classic.chains import RetrievalQA  # 👈 updated import
+from langchain_classic.chains import RetrievalQA  # classic API
 
 # Load environment variables
 load_dotenv()
 
+# Still needed for ChatOpenAI (LLM). If you want to remove OpenAI entirely,
+# we can swap this to a HuggingFace LLM later.
 if not os.getenv("OPENAI_API_KEY"):
     print("Error: OPENAI_API_KEY not found in .env file")
     sys.exit(1)
@@ -25,7 +28,7 @@ def load_pdfs(filepaths):
         try:
             loader = PyPDFLoader(filepath)
             docs = loader.load()
-            # Optional: ensure 'source' is a clean filename in metadata
+            # Ensure 'source' is a clean filename in metadata
             for d in docs:
                 d.metadata["source"] = filename
             documents.extend(docs)
@@ -110,7 +113,10 @@ def main():
         print("No new or updated PDFs. Using existing vector store only.")
 
     # 2. Initialize embeddings and (possibly existing) vector store
-    embedding = OpenAIEmbeddings()
+    # ✅ HuggingFace embeddings instead of OpenAIEmbeddings
+    embedding = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-mpnet-base-v2"
+    )
 
     # This will load existing DB if present, or create a new empty one
     vectorstore = Chroma(
