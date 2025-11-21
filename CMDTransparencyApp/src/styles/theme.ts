@@ -34,12 +34,12 @@ export const theme = {
     },
     h3: { 
       fontSize: 20, 
-      fontWeight: '600' as const, 
+      fontWeight: 'bold' as const, 
       lineHeight: 26 
     },
     h4: { 
       fontSize: 18, 
-      fontWeight: '600' as const, 
+      fontWeight: 'bold' as const, 
       lineHeight: 24 
     },
     body: { 
@@ -74,6 +74,7 @@ export const theme = {
       shadowOpacity: 0.18,
       shadowRadius: 1.0,
       elevation: 1,
+      boxShadow: '0 1px 1px rgba(0,0,0,0.18)',
     },
     md: {
       shadowOffset: {
@@ -83,6 +84,7 @@ export const theme = {
       shadowOpacity: 0.25,
       shadowRadius: 3.84,
       elevation: 5,
+      boxShadow: '0 2px 4px rgba(0,0,0,0.25)',
     },
     lg: {
       shadowOffset: {
@@ -92,6 +94,7 @@ export const theme = {
       shadowOpacity: 0.30,
       shadowRadius: 4.65,
       elevation: 8,
+      boxShadow: '0 4px 8px rgba(0,0,0,0.30)',
     },
   },
 };
