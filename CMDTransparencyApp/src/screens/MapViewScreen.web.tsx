@@ -7,6 +7,8 @@ import { theme } from '../styles/theme';
 import type { Project } from '../types';
 
 const DEFAULT_CENTER: [number, number] = [27.7172, 85.324];
+// Nepal bounding box: [southWestLat, southWestLng], [northEastLat, northEastLng]
+const NEPAL_BOUNDS: [[number, number], [number, number]] = [[26.0, 80.0], [31.0, 88.5]];
 
 const toNumber = (value: unknown): number | null => {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -49,11 +51,13 @@ const MapViewScreen: React.FC = () => {
       document.head.appendChild(link);
     }
 
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    });
+    // Use a simple dot icon (SVG in a divIcon) so the web map does not rely on external marker images.
+    // This prevents broken image icons when CDN resources are blocked.
+    const dotHtml = `
+      <span style="display:block;width:14px;height:14px;border-radius:14px;background:${theme.colors.primary};border:2px solid white;box-shadow:0 1px 2px rgba(0,0,0,0.25)"></span>
+    `;
+    // Create a reusable divIcon for markers
+    (L as any).DotIcon = L.divIcon({ html: dotHtml, className: '', iconSize: [18, 18], iconAnchor: [9, 9] });
 
     setIsReady(true);
   }, []);
@@ -130,10 +134,21 @@ const MapViewScreen: React.FC = () => {
     <View style={styles.webContainer}>
       <Text style={styles.title}>Project Map</Text>
       <View style={styles.webMapWrapper}>
-        <MapContainer center={center} zoom={7} style={mapStyle} scrollWheelZoom>
+        <MapContainer
+          // fit to Nepal and prevent panning outside the country
+          bounds={NEPAL_BOUNDS}
+          maxBounds={NEPAL_BOUNDS}
+          maxBoundsViscosity={1.0}
+          center={center}
+          zoom={7}
+          minZoom={6}
+          maxZoom={12}
+          style={mapStyle}
+          scrollWheelZoom
+        >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           {projectsWithCoords.map(({ project, coords }) => (
-            <Marker key={project.id ?? `${coords[0]}-${coords[1]}`} position={coords}>
+            <Marker key={project.id ?? `${coords[0]}-${coords[1]}`} position={coords} icon={(L as any).DotIcon}>
               <Popup>
                 <div style={{ maxWidth: 220 }}>
                   <strong>
