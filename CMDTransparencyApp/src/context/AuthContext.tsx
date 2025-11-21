@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // Types
 interface User {
@@ -32,6 +33,7 @@ interface AuthContextType extends AuthState {
   logout: () => Promise<void>;
   clearError: () => void;
   updateUser: (userData: Partial<User>) => void;
+  getAuthToken: () => Promise<string | null>;
 }
 
 interface SignupData {
@@ -94,33 +96,96 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
 // Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// API Configuration
+// Network configuration for different environments
+const getBaseURL = () => {
+  // Use the same IP address as apiService.ts for consistency
+  return 'http://192.168.88.191:8000';
+};
+
+const API_BASE_URL = getBaseURL();
+const API_ENDPOINTS = {
+  LOGIN: '/api/auth/login',
+  REGISTER: '/api/auth/register',
+  ME: '/api/auth/me',
+  DEMO: '/api/auth/demo-accounts',
+};
+
+// API Helper functions
+const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+  const url = `${API_BASE_URL}${endpoint}`;
+  
+  console.log(`Making API call to: ${url}`);
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      signal: controller.signal,
+      ...options,
+    });
+
+    clearTimeout(timeoutId);
+
+    // Get response text first to handle non-JSON responses
+    const responseText = await response.text();
+    console.log(`API Response (${response.status}):`, responseText);
+
+    // Try to parse as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('JSON Parse Error:', parseError);
+      console.error('Response text:', responseText);
+      
+      // Check if it's an internal server error
+      if (responseText.includes('Internal Server Error') || response.status === 500) {
+        throw new Error('Server error - please check if the backend is properly configured and database is connected');
+      }
+      
+      // Check if it's a database connection error
+      if (responseText.includes('database') || responseText.includes('connection')) {
+        throw new Error('Database connection error - please ensure PostgreSQL is running');
+      }
+      
+      throw new Error(`Server returned invalid response: ${responseText.substring(0, 200)}${responseText.length > 200 ? '...' : ''}`);
+    }
+    
+    if (!response.ok) {
+      throw new Error(data.detail || data.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error(`API call failed for ${url}:`, error);
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - please check your network connection');
+      }
+      
+      if (error.message === 'Network request failed' || error.message.includes('fetch')) {
+        throw new Error(`Cannot connect to server. Please ensure the backend is running on ${API_BASE_URL}`);
+      }
+      
+      throw error;
+    }
+    
+    throw new Error('An unexpected error occurred');
+  }
+};
+
 // Storage keys
 const STORAGE_KEYS = {
   USER: '@e_nirikshan_user',
   TOKEN: '@e_nirikshan_token',
 };
-
-// Mock user database (replace with actual API later)
-const MOCK_USERS = [
-  {
-    id: '1',
-    name: 'John Citizen',
-    email: 'citizen@example.com',
-    phone: '+977-9841234567',
-    password: 'password123',
-    role: 'citizen' as const,
-    verified: true,
-  },
-  {
-    id: '2',
-    name: 'सरकारी अधिकारी',
-    email: 'official@gov.np',
-    phone: '+977-9851234567',
-    password: 'admin123',
-    role: 'official' as const,
-    verified: true,
-  },
-];
 
 // Provider component
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -134,12 +199,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const checkStoredAuth = async () => {
     try {
       dispatch({ type: 'AUTH_LOADING' });
-      const storedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER);
       const storedToken = await AsyncStorage.getItem(STORAGE_KEYS.TOKEN);
 
-      if (storedUser && storedToken) {
-        const user = JSON.parse(storedUser);
-        dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+      if (storedToken) {
+        // Validate token with backend by calling /me endpoint
+        try {
+          const userData = await apiCall(API_ENDPOINTS.ME, {
+            headers: {
+              'Authorization': `Bearer ${storedToken}`,
+            },
+          });
+
+          // Update stored user data with latest from backend
+          await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
+          dispatch({ type: 'LOGIN_SUCCESS', payload: userData });
+        } catch (error) {
+          console.error('Token validation failed:', error);
+          // Token is invalid, clear storage and logout
+          await AsyncStorage.removeItem(STORAGE_KEYS.USER);
+          await AsyncStorage.removeItem(STORAGE_KEYS.TOKEN);
+          dispatch({ type: 'LOGOUT' });
+        }
       } else {
         dispatch({ type: 'LOGOUT' });
       }
@@ -153,30 +233,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       dispatch({ type: 'AUTH_LOADING' });
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call backend login API
+      const response = await apiCall(API_ENDPOINTS.LOGIN, {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
 
-      // Find user in mock database
-      const user = MOCK_USERS.find(u => u.email === email && u.password === password);
+      const { access_token, user } = response;
 
-      if (!user) {
-        dispatch({ type: 'AUTH_ERROR', payload: 'Invalid email or password' });
-        return false;
-      }
+      // Store user data and token
+      await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+      await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, access_token);
 
-      // Create user object without password
-      const { password: _, ...userData } = user;
-      const authUser: User = userData;
-
-      // Store user data
-      await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(authUser));
-      await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, `mock_token_${user.id}`);
-
-      dispatch({ type: 'LOGIN_SUCCESS', payload: authUser });
+      dispatch({ type: 'LOGIN_SUCCESS', payload: user });
       return true;
     } catch (error) {
       console.error('Login error:', error);
-      dispatch({ type: 'AUTH_ERROR', payload: 'Login failed. Please try again.' });
+      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
+      dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
       return false;
     }
   };
@@ -185,48 +259,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       dispatch({ type: 'AUTH_LOADING' });
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Check if user already exists
-      const existingUser = MOCK_USERS.find(u => u.email === userData.email);
-      if (existingUser) {
-        dispatch({ type: 'AUTH_ERROR', payload: 'User with this email already exists' });
-        return false;
-      }
-
       // Validate passwords match
       if (userData.password !== userData.confirmPassword) {
         dispatch({ type: 'AUTH_ERROR', payload: 'Passwords do not match' });
         return false;
       }
 
-      // Create new user
-      const newUser: User = {
-        id: `user_${Date.now()}`,
+      // Prepare signup data for backend
+      const signupData = {
         name: userData.name,
         email: userData.email,
-        phone: userData.phone,
+        phone: userData.phone || '',
+        password: userData.password,
+        confirm_password: userData.confirmPassword,
         role: 'citizen',
-        verified: false,
       };
 
-      // In a real app, this would be sent to the backend
-      MOCK_USERS.push({
-        ...newUser,
-        password: userData.password,
-        phone: userData.phone || '',
+      // Call backend register API
+      const response = await apiCall(API_ENDPOINTS.REGISTER, {
+        method: 'POST',
+        body: JSON.stringify(signupData),
       });
 
-      // Store user data
-      await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
-      await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, `mock_token_${newUser.id}`);
+      const { access_token, user } = response;
 
-      dispatch({ type: 'LOGIN_SUCCESS', payload: newUser });
+      // Store user data and token
+      await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+      await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, access_token);
+
+      dispatch({ type: 'LOGIN_SUCCESS', payload: user });
       return true;
     } catch (error) {
       console.error('Signup error:', error);
-      dispatch({ type: 'AUTH_ERROR', payload: 'Signup failed. Please try again.' });
+      const errorMessage = error instanceof Error ? error.message : 'Signup failed. Please try again.';
+      dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
       return false;
     }
   };
@@ -250,6 +316,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     dispatch({ type: 'UPDATE_USER', payload: userData });
   };
 
+  const getAuthToken = async (): Promise<string | null> => {
+    try {
+      return await AsyncStorage.getItem(STORAGE_KEYS.TOKEN);
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
+  };
+
   const value: AuthContextType = {
     ...state,
     login,
@@ -257,6 +332,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     logout,
     clearError,
     updateUser,
+    getAuthToken,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
