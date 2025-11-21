@@ -49,18 +49,23 @@ interface AnalyticsData {
   avgProgress: number;
   statusBreakdown: { [key: string]: number };
   ministryBreakdown: { [key: string]: number };
-  monthlyProgress: { month: string; projects: number; completed: number }[];
-  reportActivity: { [key: string]: number };
 }
 
 const AnalyticsScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'year'>('month');
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
   // API calls
   const { data: statistics, loading: statsLoading, refetch: refetchStats } = useStatistics();
   const { data: projects, loading: projectsLoading, refetch: refetchProjects } = useProjects();
+
+  // Debug API responses
+  useEffect(() => {
+    console.log('Analytics Debug - Statistics loading:', statsLoading);
+    console.log('Analytics Debug - Projects loading:', projectsLoading);
+    console.log('Analytics Debug - Statistics data:', statistics);
+    console.log('Analytics Debug - Projects data:', projects ? `${projects.length} projects` : 'No projects');
+  }, [statistics, projects, statsLoading, projectsLoading]);
 
   const chartConfig: ChartConfig = {
     backgroundColor: theme.colors.surface,
@@ -81,20 +86,25 @@ const AnalyticsScreen: React.FC = () => {
 
   useEffect(() => {
     if (projects && statistics) {
+      console.log('Analytics Debug - Statistics:', statistics);
+      console.log('Analytics Debug - Projects count:', projects.length);
+      console.log('Analytics Debug - Status breakdown:', statistics.status_breakdown);
       generateAnalyticsData();
     }
-  }, [projects, statistics, selectedTimeframe]);
+  }, [projects, statistics]);
 
   const generateAnalyticsData = () => {
     if (!projects || !statistics) return;
 
-    // Status breakdown from real project data
-    const statusCounts: { [key: string]: number } = {};
-    projects.forEach(project => {
-      statusCounts[project.status] = (statusCounts[project.status] || 0) + 1;
-    });
+    // Use status breakdown from backend statistics if available, otherwise calculate from projects
+    const statusCounts = statistics.status_breakdown && Object.keys(statistics.status_breakdown).length > 0
+      ? statistics.status_breakdown
+      : projects.reduce((acc, project) => {
+          acc[project.status] = (acc[project.status] || 0) + 1;
+          return acc;
+        }, {} as { [key: string]: number });
 
-    // Ministry breakdown
+    // Ministry breakdown from projects
     const ministryCounts: { [key: string]: number } = {};
     projects.forEach(project => {
       const ministry = project.ministry.length > 20 
@@ -103,81 +113,13 @@ const AnalyticsScreen: React.FC = () => {
       ministryCounts[ministry] = (ministryCounts[ministry] || 0) + 1;
     });
 
-    // Monthly progress from actual project data
-    const monthlyData = projects.reduce((acc, project) => {
-      const createdDate = new Date(project.procurement_plan.date_of_initiation || Date.now());
-      const monthName = createdDate.toLocaleDateString('en-US', { month: 'short' });
-      
-      const existing = acc.find(item => item.month === monthName);
-      if (existing) {
-        existing.projects += 1;
-        if (project.status === ProjectStatus.COMPLETED) {
-          existing.completed += 1;
-        }
-      } else {
-        acc.push({
-          month: monthName,
-          projects: 1,
-          completed: project.status === ProjectStatus.COMPLETED ? 1 : 0
-        });
-      }
-      return acc;
-    }, [] as { month: string; projects: number; completed: number }[]);
-
-    // Sort by month and pad with zeros if needed
-    const allMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const paddedMonthlyData = allMonths.slice(0, 6).map(month => {
-      const found = monthlyData.find(item => item.month === month);
-      return found || { month, projects: 0, completed: 0 };
-    });
-
-    // Report activity from actual citizen reports
-    const reportActivity: { [key: string]: number } = {
-      'Progress Updates': 0,
-      'Quality Issues': 0,
-      'Completions': 0,
-      'Delays': 0,
-      'Fraud Alerts': 0,
-    };
-
-    // Count reports by type from all projects
-    projects.forEach(project => {
-      if (project.citizen_reports) {
-        project.citizen_reports.forEach(report => {
-          switch (report.review_type) {
-            case 'Progress Update':
-              reportActivity['Progress Updates']++;
-              break;
-            case 'Quality Issue':
-              reportActivity['Quality Issues']++;
-              break;
-            case 'Completion Verification':
-              reportActivity['Completions']++;
-              break;
-            case 'Delay Report':
-              reportActivity['Delays']++;
-              break;
-            case 'Fraud Alert':
-              reportActivity['Fraud Alerts']++;
-              break;
-          }
-        });
-      }
-    });
-
-    // Calculate total value in NPR
-    const totalValue = projects.reduce((sum, project) => 
-      sum + (project.procurement_plan.contract_amount || 0), 0
-    );
-
+    // Use backend statistics data
     setAnalyticsData({
-      totalProjects: projects.length,
-      totalValue,
-      avgProgress: projects.length > 0 ? Math.round(projects.reduce((sum, p) => sum + p.progress_percentage, 0) / projects.length) : 0,
+      totalProjects: statistics.total_projects,
+      totalValue: statistics.total_contract_value,
+      avgProgress: Math.round(statistics.average_progress),
       statusBreakdown: statusCounts,
       ministryBreakdown: ministryCounts,
-      monthlyProgress: paddedMonthlyData,
-      reportActivity,
     });
   };
 
@@ -191,59 +133,60 @@ const AnalyticsScreen: React.FC = () => {
     return <LoadingSpinner message="Loading analytics..." />;
   }
 
+  if (!statistics && !projects) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="analytics-outline" size={64} color={theme.colors.textSecondary} />
+          <Text style={styles.errorText}>Failed to load analytics data</Text>
+          <Text style={styles.errorText}>Stats Loading: {statsLoading ? 'Yes' : 'No'}</Text>
+          <Text style={styles.errorText}>Projects Loading: {projectsLoading ? 'Yes' : 'No'}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!analyticsData) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Ionicons name="analytics-outline" size={64} color={theme.colors.textSecondary} />
           <Text style={styles.errorText}>No analytics data available</Text>
+          <Text style={styles.errorText}>Statistics: {statistics ? 'Available' : 'Missing'}</Text>
+          <Text style={styles.errorText}>Projects: {projects ? `${projects.length} found` : 'Missing'}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   const statusChartData = {
-    labels: Object.keys(analyticsData.statusBreakdown),
+    labels: Object.keys(analyticsData.statusBreakdown).length > 0 
+      ? Object.keys(analyticsData.statusBreakdown).map(label => 
+          label.length > 10 ? label.substring(0, 10) + '...' : label
+        )
+      : ['No Data'],
     datasets: [{
-      data: Object.values(analyticsData.statusBreakdown),
+      data: Object.keys(analyticsData.statusBreakdown).length > 0 ? Object.values(analyticsData.statusBreakdown) : [1],
       color: (opacity = 1) => theme.colors.primary + Math.floor(opacity * 255).toString(16),
       strokeWidth: 2,
     }],
   };
 
-  const monthlyChartData = {
-    labels: analyticsData.monthlyProgress.map(d => d.month),
-    datasets: [
-      {
-        data: analyticsData.monthlyProgress.map(d => d.projects),
-        color: (opacity = 1) => theme.colors.primary + Math.floor(opacity * 255).toString(16),
-        strokeWidth: 3,
-      },
-      {
-        data: analyticsData.monthlyProgress.map(d => d.completed),
-        color: (opacity = 1) => theme.colors.success + Math.floor(opacity * 255).toString(16),
-        strokeWidth: 3,
-      },
-    ],
-    legend: ['Total Projects', 'Completed'],
-  };
-
-  const pieData = Object.entries(analyticsData.statusBreakdown).map(([key, value], index) => ({
-    name: key,
-    population: value,
-    color: [theme.colors.primary, theme.colors.success, theme.colors.warning, theme.colors.error, theme.colors.info][index % 5],
-    legendFontColor: theme.colors.text,
-    legendFontSize: 12,
-  }));
-
-  const reportActivityData = {
-    labels: Object.keys(analyticsData.reportActivity).map(label => 
-      label.length > 8 ? label.substring(0, 8) + '...' : label
-    ),
-    datasets: [{
-      data: Object.values(analyticsData.reportActivity),
-    }],
-  };
+  const pieData = Object.keys(analyticsData.statusBreakdown).length > 0 
+    ? Object.entries(analyticsData.statusBreakdown).map(([key, value], index) => ({
+        name: key,
+        population: value,
+        color: [theme.colors.primary, theme.colors.success, theme.colors.warning, theme.colors.error, theme.colors.accent][index % 5],
+        legendFontColor: theme.colors.text,
+        legendFontSize: 12,
+      }))
+    : [{
+        name: 'No Data',
+        population: 1,
+        color: theme.colors.disabled,
+        legendFontColor: theme.colors.text,
+        legendFontSize: 12,
+      }];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -283,33 +226,12 @@ const AnalyticsScreen: React.FC = () => {
           </Card>
 
           <Card style={styles.metricCard}>
-            <Ionicons name="chatbubbles-outline" size={32} color={theme.colors.info} />
+            <Ionicons name="chatbubbles-outline" size={32} color={theme.colors.accent} />
             <Text style={styles.metricValue}>
-              {Object.values(analyticsData.reportActivity).reduce((a, b) => a + b, 0)}
+              {statistics?.total_citizen_reports || 0}
             </Text>
             <Text style={styles.metricLabel}>Citizen Reports</Text>
           </Card>
-        </View>
-
-        {/* Timeframe Selector */}
-        <View style={styles.timeframeContainer}>
-          {(['week', 'month', 'year'] as const).map((timeframe) => (
-            <TouchableOpacity
-              key={timeframe}
-              style={[
-                styles.timeframeButton,
-                selectedTimeframe === timeframe && styles.activeTimeframeButton
-              ]}
-              onPress={() => setSelectedTimeframe(timeframe)}
-            >
-              <Text style={[
-                styles.timeframeText,
-                selectedTimeframe === timeframe && styles.activeTimeframeText
-              ]}>
-                {timeframe.charAt(0).toUpperCase() + timeframe.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
         </View>
 
         {/* Project Status Distribution */}
@@ -330,22 +252,6 @@ const AnalyticsScreen: React.FC = () => {
           />
         </Card>
 
-        {/* Monthly Project Progress */}
-        <Card style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <Ionicons name="trending-up-outline" size={24} color={theme.colors.primary} />
-            <Text style={styles.chartTitle}>Monthly Project Progress</Text>
-          </View>
-          <LineChart
-            data={monthlyChartData}
-            width={screenWidth - 60}
-            height={220}
-            chartConfig={chartConfig}
-            bezier
-            style={styles.chart}
-          />
-        </Card>
-
         {/* Project Status Bar Chart */}
         <Card style={styles.chartCard}>
           <View style={styles.chartHeader}>
@@ -355,31 +261,13 @@ const AnalyticsScreen: React.FC = () => {
           <BarChart
             data={statusChartData}
             width={screenWidth - 60}
-            height={220}
+            height={250}
             chartConfig={chartConfig}
-            verticalLabelRotation={30}
+            verticalLabelRotation={0}
             style={styles.chart}
             showValuesOnTopOfBars
-          />
-        </Card>
-
-        {/* Citizen Reports Activity */}
-        <Card style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <Ionicons name="chatbubble-ellipses-outline" size={24} color={theme.colors.primary} />
-            <Text style={styles.chartTitle}>Citizen Report Activity</Text>
-          </View>
-          <BarChart
-            data={reportActivityData}
-            width={screenWidth - 60}
-            height={220}
-            chartConfig={{
-              ...chartConfig,
-              color: (opacity = 1) => theme.colors.success + Math.floor(opacity * 255).toString(16),
-            }}
-            verticalLabelRotation={30}
-            style={styles.chart}
-            showValuesOnTopOfBars
+            yAxisLabel=""
+            yAxisSuffix=""
           />
         </Card>
 
@@ -468,32 +356,6 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.caption.fontSize,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-  },
-  timeframeContainer: {
-    flexDirection: 'row',
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.xs,
-  },
-  timeframeButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-    alignItems: 'center',
-  },
-  activeTimeframeButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  timeframeText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.textSecondary,
-    fontWeight: '600',
-  },
-  activeTimeframeText: {
-    color: theme.colors.surface,
   },
   chartCard: {
     margin: theme.spacing.md,

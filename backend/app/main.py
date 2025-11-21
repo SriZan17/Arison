@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routers import projects, reviews
+from app.routers import projects, reviews, auth
 from app.database.config import connect_db, disconnect_db
 from pathlib import Path
 
@@ -43,6 +43,7 @@ uploads_dir.mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Include routers
+app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(reviews.router)
 
@@ -56,6 +57,7 @@ async def root():
         "version": "1.0.0",
         "docs": "/docs",
         "endpoints": {
+            "authentication": "/api/auth",
             "projects": "/api/projects",
             "reviews": "/api/reviews",
             "statistics": "/api/projects/stats/overview",

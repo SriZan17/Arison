@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, List
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 
 
@@ -30,6 +30,12 @@ class ReviewType(str, Enum):
     COMPLETION_VERIFICATION = "Completion Verification"
     DELAY_REPORT = "Delay Report"
     FRAUD_ALERT = "Fraud Alert"
+
+
+class UserRole(str, Enum):
+    CITIZEN = "citizen"
+    OFFICIAL = "official"
+    ADMIN = "admin"
 
 
 class TenderDocuments(BaseModel):
@@ -101,17 +107,29 @@ class CitizenReport(BaseModel):
 
 class CitizenReview(BaseModel):
     """Enhanced citizen review with work completion status"""
-    reporter_name: Optional[str] = Field(None, description="Name of the reporter (optional for anonymous reports)")
-    reporter_contact: Optional[str] = Field(None, description="Contact number or email (optional)")
+
+    reporter_name: Optional[str] = Field(
+        None, description="Name of the reporter (optional for anonymous reports)"
+    )
+    reporter_contact: Optional[str] = Field(
+        None, description="Contact number or email (optional)"
+    )
     review_type: ReviewType = Field(..., description="Type of review being submitted")
-    review_text: str = Field(..., min_length=10, description="Detailed review text (minimum 10 characters)")
-    work_completed: bool = Field(..., description="Is the work completed according to official status?")
-    quality_rating: Optional[int] = Field(None, ge=1, le=5, description="Quality rating from 1-5 (if applicable)")
+    review_text: str = Field(
+        ..., min_length=10, description="Detailed review text (minimum 10 characters)"
+    )
+    work_completed: bool = Field(
+        ..., description="Is the work completed according to official status?"
+    )
+    quality_rating: Optional[int] = Field(
+        None, ge=1, le=5, description="Quality rating from 1-5 (if applicable)"
+    )
     geolocation: Optional[dict] = Field(None, description="GPS coordinates {lat, lng}")
-    
+
 
 class ImageUploadResponse(BaseModel):
     """Response model for image upload"""
+
     filename: str
     file_path: str
     file_size: int
@@ -121,6 +139,7 @@ class ImageUploadResponse(BaseModel):
 
 class ReviewSubmissionResponse(BaseModel):
     """Response model for review submission"""
+
     review_id: str
     project_id: str
     message: str
@@ -134,3 +153,47 @@ class ProcurementFilter(BaseModel):
     fiscal_year: Optional[str] = None
     min_amount: Optional[float] = None
     max_amount: Optional[float] = None
+
+
+# Authentication Models
+class UserBase(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    email: EmailStr
+    phone: Optional[str] = Field(None, pattern=r"^\+?[\d\s\-()]{10,}$")
+    role: UserRole = UserRole.CITIZEN
+
+
+class UserCreate(UserBase):
+    password: str = Field(..., min_length=6)
+    confirm_password: str = Field(..., min_length=6)
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class User(UserBase):
+    id: str
+    verified: bool = False
+    created_at: datetime
+    last_login: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class UserInDB(User):
+    hashed_password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    expires_in: int
+    user: User
+
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
+    user_id: Optional[str] = None
