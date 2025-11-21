@@ -75,11 +75,12 @@ def get_rag_retriever():
     device = resolve_device()
     print(f"Embedding model device: {device}")
 
-    # Create OpenAI embeddings
+    # Get and set OpenAI API key before creating embeddings
     openai_api_key = get_openai_api_key()
-    embedding = OpenAIEmbeddings(model="text-embedding-3-small")
-    # Set the API key via environment for the embedding
     os.environ["OPENAI_API_KEY"] = openai_api_key
+
+    # Create OpenAI embeddings
+    embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
     rag_vectorstore = Chroma(
         persist_directory=RAG_PERSIST_DIR,
