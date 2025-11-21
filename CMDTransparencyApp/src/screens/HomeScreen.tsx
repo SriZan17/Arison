@@ -18,11 +18,8 @@ import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ProjectCard from '../components/project/ProjectCard';
 
-// Redux
-import { useGetStatisticsQuery, useGetProjectsQuery } from '../redux/api/projectsApi';
-import { useDispatch, useSelector } from 'react-redux';
-import { setUserLocation } from '../redux/slices/appSlice';
-import { RootState } from '../redux/store';
+// Hooks
+import { useStatistics, useProjects } from '../hooks/useApi';
 
 // Services
 import { LocationService } from '../services/locationService';
@@ -38,23 +35,25 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const dispatch = useDispatch();
-  const { userLocation } = useSelector((state: RootState) => state.app);
   
   const [refreshing, setRefreshing] = useState(false);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
-  // API calls
+  // API calls using our custom hooks
   const { 
     data: statistics, 
-    isLoading: statsLoading, 
+    loading: statsLoading, 
     refetch: refetchStats 
-  } = useGetStatisticsQuery();
+  } = useStatistics();
   
   const { 
     data: recentProjects, 
-    isLoading: projectsLoading,
+    loading: projectsLoading,
     refetch: refetchProjects 
-  } = useGetProjectsQuery({ limit: 3 });
+  } = useProjects();
 
   useEffect(() => {
     requestLocation();
@@ -63,10 +62,10 @@ const HomeScreen: React.FC = () => {
   const requestLocation = async () => {
     try {
       const location = await LocationService.getCurrentLocation();
-      dispatch(setUserLocation({
+      setUserLocation({
         latitude: location.latitude,
         longitude: location.longitude,
-      }));
+      });
     } catch (error) {
       console.warn('Could not get location:', error);
     }
@@ -105,7 +104,7 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('ProjectDetail', { projectId });
   };
 
-  if (statsLoading && projectsLoading) {
+  if (statsLoading || projectsLoading) {
     return <LoadingSpinner message="Loading dashboard..." />;
   }
 
@@ -198,7 +197,7 @@ const HomeScreen: React.FC = () => {
         </View>
 
         {recentProjects && recentProjects.length > 0 ? (
-          recentProjects.map((project) => (
+          recentProjects.slice(0, 5).map((project: any) => (
             <ProjectCard
               key={project.id}
               project={project}

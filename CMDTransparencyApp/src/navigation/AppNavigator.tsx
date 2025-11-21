@@ -5,12 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
-import ProjectBrowserScreen from '../screens/ProjectBrowserScreen';
+import ProjectBrowserScreen from '../screens/ProjectBrowserScreenSimple';
 import ProjectDetailScreen from '../screens/ProjectDetailScreen';
 import ReviewSubmissionScreen from '../screens/ReviewSubmissionScreen';
-import MapViewScreen from '../screens/MapViewScreen';
-import AnalyticsScreen from '../screens/AnalyticsScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import MapViewScreen from '../screens/MapViewScreenSimple';
+import AnalyticsScreen from '../screens/AnalyticsScreenSimple';
+import ProfileScreen from '../screens/ProfileScreenSimple';
 
 import { theme } from '../styles/theme';
 
