@@ -25,12 +25,17 @@ const Card: React.FC<CardProps> = ({
 }) => {
   const CardComponent = onPress ? TouchableOpacity : View;
 
+  const cardProps: any = {
+    style: [styles.card, style],
+  };
+
+  if (onPress) {
+    cardProps.onPress = onPress;
+    cardProps.activeOpacity = 0.7;
+  }
+
   return (
-    <CardComponent
-      style={[styles.card, style]}
-      onPress={onPress}
-      activeOpacity={onPress ? 0.7 : 1}
-    >
+    <CardComponent {...cardProps}>
       {(title || subtitle) && (
         <View style={styles.header}>
           {title && <Text style={styles.title}>{title}</Text>}
