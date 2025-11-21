@@ -11,6 +11,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -114,9 +115,12 @@ const LoginScreen: React.FC = () => {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Ionicons name="shield-checkmark" size={80} color={theme.colors.primary} />
-            <Text style={styles.appName}>E-निरीक्षण</Text>
-            <Text style={styles.subtitle}>Government Project Transparency</Text>
+            <Image 
+              source={require('../../assets/logo.png')} 
+              style={styles.appLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.subtitle}>E-निरीक्षण</Text>
           </View>
 
           {/* Login Form */}
@@ -252,17 +256,17 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.xl,
     paddingBottom: theme.spacing.lg,
   },
-  appName: {
-    fontSize: theme.typography.h1.fontSize,
-    fontWeight: theme.typography.h1.fontWeight,
-    color: theme.colors.primary,
-    marginTop: theme.spacing.md,
+  appLogo: {
+    height: 100,
+    width: 320,
+    marginVertical: theme.spacing.md,
   },
   subtitle: {
     fontSize: theme.typography.caption.fontSize,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: theme.spacing.sm,
+    fontWeight: 'bold',
   },
   formCard: {
     marginBottom: theme.spacing.lg,

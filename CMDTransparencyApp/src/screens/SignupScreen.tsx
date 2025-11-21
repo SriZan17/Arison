@@ -11,6 +11,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -114,7 +115,7 @@ const SignupScreen: React.FC = () => {
     }
 
     Alert.alert(
-      'Welcome to E-निरीक्षण!',
+      'Welcome to Government Transparency Platform!',
       'Your account has been created successfully. You can now start monitoring government projects.',
       [{ text: 'Get Started', onPress: () => {} }]
     );
@@ -141,9 +142,13 @@ const SignupScreen: React.FC = () => {
             >
               <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
             </TouchableOpacity>
-            <Ionicons name="person-add" size={60} color={theme.colors.primary} />
+            <Image 
+              source={require('../../assets/logo.png')} 
+              style={styles.appLogo}
+              resizeMode="contain"
+            />
             <Text style={styles.headerTitle}>Create Account</Text>
-            <Text style={styles.headerSubtitle}>Join E-निरीक्षण to monitor government projects</Text>
+            <Text style={styles.headerSubtitle}>Join the government transparency platform</Text>
           </View>
 
           {/* Signup Form */}
@@ -349,11 +354,16 @@ const styles = StyleSheet.create({
     left: 0,
     padding: theme.spacing.sm,
   },
+  appLogo: {
+    height: 80,
+    width: 260,
+    marginVertical: theme.spacing.md,
+  },
   headerTitle: {
     fontSize: theme.typography.h2.fontSize,
     fontWeight: theme.typography.h2.fontWeight,
     color: theme.colors.primary,
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
   headerSubtitle: {
     fontSize: theme.typography.caption.fontSize,

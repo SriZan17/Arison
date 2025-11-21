@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../styles/theme';
@@ -80,7 +81,11 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
 
         {/* App Name */}
         <Animated.View style={[styles.textContainer, { opacity: textOpacity }]}>
-          <Text style={styles.appName}>E-निरीक्षण</Text>
+          <Image 
+            source={require('../../../assets/logo.png')} 
+            style={styles.appLogo}
+            resizeMode="contain"
+          />
           <Text style={styles.subtitle}>Government Project Transparency</Text>
         </Animated.View>
 
@@ -144,11 +149,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.xxl,
   },
-  appName: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: theme.colors.surface,
-    marginBottom: theme.spacing.xs,
+  appLogo: {
+    height: 48,
+    width: 160,
+    marginBottom: theme.spacing.sm,
   },
   subtitle: {
     fontSize: 16,

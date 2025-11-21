@@ -96,7 +96,7 @@ const MainTabNavigator: React.FC = () => {
       <Tab.Screen 
         name="Home" 
         component={HomeScreen}
-        options={{ title: 'E-निरीक्षण' }}
+        options={{ title: 'Home' }}
       />
       <Tab.Screen 
         name="Projects" 
@@ -116,7 +116,7 @@ const MainTabNavigator: React.FC = () => {
       <Tab.Screen 
         name="IMaan" 
         component={IMaanScreen}
-        options={{ title: 'i-maan' }}
+        options={{ title: 'e-maan' }}
       />
     </Tab.Navigator>
   );
