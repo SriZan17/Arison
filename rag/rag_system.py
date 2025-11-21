@@ -6,17 +6,8 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
+from langchain_openai import OpenAIEmbeddings
 
-
-def resolve_device():
-    """Return the best available torch device for embeddings."""
-    try:
-        import torch
-        if torch.cuda.is_available():
-            return "cuda"
-    except Exception:
-        pass
-    return "cpu"
 
 def load_pdfs(filepaths):
     """Loads PDFs but logs empty PDFs to empty.txt."""
@@ -69,6 +60,11 @@ def save_pdf_state(state_path, state):
     with open(state_path, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2)
 
+def get_openai_api_key() -> str:
+    """Use MATE if set, otherwise fall back to OPENAI_API_KEY."""
+    key = os.getenv("RAG_KEY")
+    print(key)
+    return key
 
 def find_new_or_updated_pdfs(pdf_dir, state, empty_log_path="empty.txt"):
     """
@@ -136,13 +132,9 @@ def main():
     else:
         print("No new or updated PDFs. Using existing vector store only.")
 
-    # 2. Initialize embeddings and (possibly existing) vector store
-    device = resolve_device()
-    print(f"Embedding model device: {device}")
-    embedding = HuggingFaceEmbeddings(
-        model_name="BAAI/bge-m3",
-        encode_kwargs={"normalize_embeddings": True},
-        model_kwargs={"device": device}
+    embedding = OpenAIEmbeddings(
+        model="text-embedding-3-small",   # or "text-embedding-3-small"
+        api_key=get_openai_api_key()
     )
 
     # This will load existing DB if present, or create a new empty one
