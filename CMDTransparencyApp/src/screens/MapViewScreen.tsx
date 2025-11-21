@@ -1,9 +1,16 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MapView, { Callout, Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { useProjects } from '../hooks/useApi';
 import { theme } from '../styles/theme';
+import { openInMaps } from '../utils/mapUtils';
 import type { Project } from '../types';
+import type { RootStackParamList } from '../navigation/AppNavigator';
+
+type MapViewNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const DEFAULT_REGION: Region = {
   latitude: 27.7172,
@@ -41,7 +48,21 @@ const getProjectCoordinates = (project: Project | any) => {
 };
 
 const MapViewScreen: React.FC = () => {
+  const navigation = useNavigation<MapViewNavigationProp>();
   const { data: projects, loading, error } = useProjects();
+
+  const handleMarkerPress = (project: Project) => {
+    navigation.navigate('ProjectDetail', { projectId: project.id });
+  };
+
+  const handleLocationPress = (project: Project) => {
+    if (project.location) {
+      openInMaps({
+        lat: project.location.lat,
+        lng: project.location.lng
+      });
+    }
+  };
 
   const geoProjects = useMemo(() => {
     return (projects || [])
@@ -107,9 +128,14 @@ const MapViewScreen: React.FC = () => {
             coordinate={coords}
             title={project.procurement_plan?.details_of_work || project.budget_subtitle}
             description={`Progress: ${project.progress_percentage ?? 'N/A'}%`}
+            onPress={() => handleMarkerPress(project)}
           >
-            <Callout tooltip>
-              <View style={styles.callout}>
+            <Callout tooltip onPress={() => handleMarkerPress(project)}>
+              <TouchableOpacity
+                style={styles.callout}
+                onPress={() => handleMarkerPress(project)}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.calloutTitle}>
                   {project.procurement_plan?.details_of_work || project.budget_subtitle}
                 </Text>
@@ -120,7 +146,27 @@ const MapViewScreen: React.FC = () => {
                 {project.location?.address ? (
                   <Text style={styles.calloutMeta}>{project.location.address}</Text>
                 ) : null}
-              </View>
+                
+                <View style={styles.calloutActions}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleMarkerPress(project)}
+                  >
+                    <Ionicons name="eye-outline" size={16} color={theme.colors.primary} />
+                    <Text style={styles.actionText}>View Details</Text>
+                  </TouchableOpacity>
+                  
+                  {project.location && (
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => handleLocationPress(project)}
+                    >
+                      <Ionicons name="navigate-outline" size={16} color={theme.colors.success} />
+                      <Text style={styles.actionText}>Open Maps</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </TouchableOpacity>
             </Callout>
           </Marker>
         ))}
@@ -169,6 +215,26 @@ const styles = StyleSheet.create({
   calloutMeta: {
     color: theme.colors.textSecondary,
     fontSize: theme.typography.caption.fontSize,
+    marginBottom: 2,
+  },
+  calloutActions: {
+    flexDirection: 'row',
+    marginTop: theme.spacing.sm,
+    gap: theme.spacing.xs,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: 4,
+    borderRadius: theme.borderRadius.sm,
+    gap: 4,
+  },
+  actionText: {
+    fontSize: 12,
+    color: theme.colors.text,
+    fontWeight: '500',
   },
 });
 

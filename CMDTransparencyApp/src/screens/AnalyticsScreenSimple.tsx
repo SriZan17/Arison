@@ -88,7 +88,7 @@ const AnalyticsScreen: React.FC = () => {
   const generateAnalyticsData = () => {
     if (!projects || !statistics) return;
 
-    // Status breakdown
+    // Status breakdown from real project data
     const statusCounts: { [key: string]: number } = {};
     projects.forEach(project => {
       statusCounts[project.status] = (statusCounts[project.status] || 0) + 1;
@@ -103,25 +103,69 @@ const AnalyticsScreen: React.FC = () => {
       ministryCounts[ministry] = (ministryCounts[ministry] || 0) + 1;
     });
 
-    // Monthly progress simulation (using fiscal years)
-    const monthlyData = [
-      { month: 'Jan', projects: Math.floor(Math.random() * 20) + 10, completed: Math.floor(Math.random() * 15) + 5 },
-      { month: 'Feb', projects: Math.floor(Math.random() * 20) + 10, completed: Math.floor(Math.random() * 15) + 5 },
-      { month: 'Mar', projects: Math.floor(Math.random() * 20) + 10, completed: Math.floor(Math.random() * 15) + 5 },
-      { month: 'Apr', projects: Math.floor(Math.random() * 20) + 10, completed: Math.floor(Math.random() * 15) + 5 },
-      { month: 'May', projects: Math.floor(Math.random() * 20) + 10, completed: Math.floor(Math.random() * 15) + 5 },
-      { month: 'Jun', projects: Math.floor(Math.random() * 20) + 10, completed: Math.floor(Math.random() * 15) + 5 },
-    ];
+    // Monthly progress from actual project data
+    const monthlyData = projects.reduce((acc, project) => {
+      const createdDate = new Date(project.procurement_plan.date_of_initiation || Date.now());
+      const monthName = createdDate.toLocaleDateString('en-US', { month: 'short' });
+      
+      const existing = acc.find(item => item.month === monthName);
+      if (existing) {
+        existing.projects += 1;
+        if (project.status === ProjectStatus.COMPLETED) {
+          existing.completed += 1;
+        }
+      } else {
+        acc.push({
+          month: monthName,
+          projects: 1,
+          completed: project.status === ProjectStatus.COMPLETED ? 1 : 0
+        });
+      }
+      return acc;
+    }, [] as { month: string; projects: number; completed: number }[]);
 
-    // Report activity
-    const reportActivity = {
-      'Progress Updates': Math.floor(Math.random() * 50) + 20,
-      'Quality Issues': Math.floor(Math.random() * 30) + 10,
-      'Completions': Math.floor(Math.random() * 25) + 5,
-      'Delays': Math.floor(Math.random() * 20) + 5,
-      'Fraud Alerts': Math.floor(Math.random() * 10) + 1,
+    // Sort by month and pad with zeros if needed
+    const allMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const paddedMonthlyData = allMonths.slice(0, 6).map(month => {
+      const found = monthlyData.find(item => item.month === month);
+      return found || { month, projects: 0, completed: 0 };
+    });
+
+    // Report activity from actual citizen reports
+    const reportActivity: { [key: string]: number } = {
+      'Progress Updates': 0,
+      'Quality Issues': 0,
+      'Completions': 0,
+      'Delays': 0,
+      'Fraud Alerts': 0,
     };
 
+    // Count reports by type from all projects
+    projects.forEach(project => {
+      if (project.citizen_reports) {
+        project.citizen_reports.forEach(report => {
+          switch (report.review_type) {
+            case 'Progress Update':
+              reportActivity['Progress Updates']++;
+              break;
+            case 'Quality Issue':
+              reportActivity['Quality Issues']++;
+              break;
+            case 'Completion Verification':
+              reportActivity['Completions']++;
+              break;
+            case 'Delay Report':
+              reportActivity['Delays']++;
+              break;
+            case 'Fraud Alert':
+              reportActivity['Fraud Alerts']++;
+              break;
+          }
+        });
+      }
+    });
+
+    // Calculate total value in NPR
     const totalValue = projects.reduce((sum, project) => 
       sum + (project.procurement_plan.contract_amount || 0), 0
     );
@@ -129,10 +173,10 @@ const AnalyticsScreen: React.FC = () => {
     setAnalyticsData({
       totalProjects: projects.length,
       totalValue,
-      avgProgress: Math.round(projects.reduce((sum, p) => sum + p.progress_percentage, 0) / projects.length),
+      avgProgress: projects.length > 0 ? Math.round(projects.reduce((sum, p) => sum + p.progress_percentage, 0) / projects.length) : 0,
       statusBreakdown: statusCounts,
       ministryBreakdown: ministryCounts,
-      monthlyProgress: monthlyData,
+      monthlyProgress: paddedMonthlyData,
       reportActivity,
     });
   };
@@ -227,7 +271,7 @@ const AnalyticsScreen: React.FC = () => {
           <Card style={styles.metricCard}>
             <Ionicons name="cash-outline" size={32} color={theme.colors.success} />
             <Text style={styles.metricValue}>
-              ৳{(analyticsData.totalValue / 1000000).toFixed(1)}M
+              NPR {(analyticsData.totalValue / 1000000).toFixed(1)}M
             </Text>
             <Text style={styles.metricLabel}>Total Value</Text>
           </Card>
