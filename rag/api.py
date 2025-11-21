@@ -34,12 +34,13 @@ rag_retriever = None
 
 def get_openai_api_key() -> str:
     """Use MATE if set, otherwise fall back to OPENAI_API_KEY."""
-    key = os.getenv("MATE") or os.getenv("OPENAI_API_KEY")
+    key = os.getenv("RAG_KEY")
     if not key:
         raise HTTPException(
             status_code=500,
             detail="No API key found. Set MATE or OPENAI_API_KEY in your .env.",
         )
+    print(key)
     return key
 
 
@@ -154,7 +155,7 @@ async def rag_chatbot_endpoint(request: Request):
             detail="No user message found in 'messages'.",
         )
 
-    # Get retriever and fetch context
+    # 1) RAG retrieval
     retriever = get_rag_retriever()
     try:
         docs = retriever.invoke(query)
@@ -166,9 +167,9 @@ async def rag_chatbot_endpoint(request: Request):
 
     context_text = _format_context(docs)
 
-    # Build RAG-aware system prompt
+    # 2) Build RAG-aware system prompt
     system_prompt = (
-        "You are a retrieval-augmented assistant.\n"
+        "You are a retrieval-augmented assistant who helps Nepali citizens.\n"
         "You answer questions using ONLY the context provided below.\n"
         "If the answer is not clearly supported by the context, say you don't know.\n\n"
         "CONTEXT:\n"
@@ -181,14 +182,22 @@ async def rag_chatbot_endpoint(request: Request):
         {"role": "system", "content": system_prompt},
     ] + messages
 
-    # Call OpenAI with your existing helper
+    # 3) Call OpenAI directly (no helper)
     api_key = get_openai_api_key()
     client = openai.OpenAI(api_key=api_key)
 
+
     try:
-        reply = get_ai_explanation_chat(client, full_messages)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI error: {e}")
+        resp = client.chat.completions.create(
+            model="gpt-5-mini-2025-08-07",
+            messages=full_messages,
+            top_p=1,
+            presence_penalty=0,
+            frequency_penalty=0,
+        )
+        reply = resp.choices[0].message.content
+    except openai.OpenAIError as e:
+        raise HTTPException(status_code=500, detail=f"OpenAI API error: {e}")
 
     # Append the assistant's reply to the conversation
     messages.append({"role": "assistant", "content": reply})
@@ -205,21 +214,6 @@ async def rag_chatbot_endpoint(request: Request):
 
     return JSONResponse({"messages": messages, "sources": sources})
 
-def get_ai_explanation_chat(client: openai.OpenAI, messages: list) -> str:
-    user_message_count = sum(1 for msg in messages if msg.get("role") == "user")
-    if user_message_count > 11:
-        return "Usage limit reached. You have exceeded the maximum number of questions per session."
-    try:
-        resp = client.chat.completions.create(
-            model="gpt-5.1-mini",
-            messages=messages,
-            top_p=1,
-            presence_penalty=0,
-            frequency_penalty=0,
-        )
-        return resp.choices[0].message.content
-    except openai.OpenAIError as e:
-        raise RuntimeError(f"OpenAI API error: {e}")
 
 if __name__ == "__main__":
     import uvicorn
