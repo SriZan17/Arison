@@ -9,15 +9,6 @@ from langchain_openai import ChatOpenAI
 from langchain_chroma import Chroma
 from langchain_classic.chains import RetrievalQA  # classic API
 
-# Load environment variables
-load_dotenv()
-
-# Still needed for ChatOpenAI (LLM). If you want to remove OpenAI entirely,
-# we can swap this to a HuggingFace LLM later.
-if not os.getenv("OPENAI_API_KEY"):
-    print("Error: OPENAI_API_KEY not found in .env file")
-    sys.exit(1)
-
 
 def load_pdfs(filepaths):
     """Loads PDFs from the given list of filepaths."""
