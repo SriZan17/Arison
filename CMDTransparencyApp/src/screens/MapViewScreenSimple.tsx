@@ -6,10 +6,10 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
-  Linking,
 } from 'react-native';
 import { theme } from '../styles/theme';
 import { useProjects } from '../hooks/useApi';
+import { openInMaps } from '../utils/mapUtils';
 import type { Project } from '../types';
 
 const toNumber = (value: unknown): number | null => {
@@ -38,13 +38,6 @@ const getCoords = (project: Project | any) => {
     return { latitude: lat, longitude: lon };
   }
   return null;
-};
-
-const openInOpenStreetMap = (lat: number, lon: number) => {
-  const url = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
-  Linking.openURL(url).catch(() => {
-    // ignore failure; could show an Alert if needed
-  });
 };
 
 const MapViewScreen: React.FC = () => {
@@ -111,7 +104,7 @@ const MapViewScreen: React.FC = () => {
               </View>
               <TouchableOpacity
                 style={styles.openBtn}
-                onPress={() => openInOpenStreetMap(coords!.latitude, coords!.longitude)}
+                onPress={() => openInMaps({ lat: coords!.latitude, lng: coords!.longitude })}
               >
                 <Text style={styles.openText}>Open</Text>
               </TouchableOpacity>

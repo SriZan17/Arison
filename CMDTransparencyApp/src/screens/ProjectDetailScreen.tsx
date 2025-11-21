@@ -11,6 +11,7 @@ import {
   RefreshControl,
   Image,
   Dimensions,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,7 @@ import FullScreenImageViewer from '../components/common/FullScreenImageViewer';
 // Hooks and Services
 import { useProject, useProjectReports } from '../hooks/useApi';
 import { reviewsApi } from '../services/apiService';
+import { openInMaps } from '../utils/mapUtils';
 
 // Types
 import { theme } from '../styles/theme';
@@ -98,8 +100,10 @@ const ProjectDetailScreen: React.FC = () => {
 
   const handleViewLocation = () => {
     if (project?.location) {
-      // TODO: Navigate to map screen with project location
-      Alert.alert('Location', `Lat: ${project.location.lat}, Lng: ${project.location.lng}`);
+      openInMaps({
+        lat: project.location.lat,
+        lng: project.location.lng
+      });
     } else {
       Alert.alert('Location', 'Location information not available for this project.');
     }

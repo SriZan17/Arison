@@ -90,15 +90,14 @@ def _format_context(docs) -> str:
     for d in docs:
         source = d.metadata.get("source", "Unknown")
         page = d.metadata.get("page", "Unknown")
-        parts.append(
-            f"Source: {source}, Page: {page}\n{d.page_content}"
-        )
+        parts.append(f"Source: {source}, Page: {page}\n{d.page_content}")
     return "\n\n---\n\n".join(parts)
 
 
 # -------------------------------------------------------------------
 # Startup (optional pre-load)
 # -------------------------------------------------------------------
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -113,6 +112,7 @@ async def startup_event():
 # -------------------------------------------------------------------
 # RAG chatbot endpoint
 # -------------------------------------------------------------------
+
 
 @app.post("/chatbot")
 async def rag_chatbot_endpoint(request: Request):
@@ -186,7 +186,6 @@ async def rag_chatbot_endpoint(request: Request):
     api_key = get_openai_api_key()
     client = openai.OpenAI(api_key=api_key)
 
-
     try:
         resp = client.chat.completions.create(
             model="gpt-5-mini-2025-08-07",
@@ -218,4 +217,4 @@ async def rag_chatbot_endpoint(request: Request):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8080)
