@@ -5,10 +5,10 @@ Simulates real government tender and procurement data
 
 mock_projects = [
     {
-        "id": "PRJ-2087-001",
-        "fiscal_year": "2086/87",
+        "id": "PRJ-2074-001",
+        "fiscal_year": "2074/75",
         "ministry": "Likhu Tamakoshi Rural Municipality",
-        "budget_subtitle": "2082/83-21-05",
+        "budget_subtitle": "2073/74-21-05",
         "procurement_plan": {
             "sl_no": 1,
             "project_type": "Estimated",
@@ -33,7 +33,7 @@ mock_projects = [
             "date_of_initiation": "02-12-2025",
             "date_of_completion": "01-03-2026",
             "contractor_name": "Himalayan Construction Pvt. Ltd.",
-            "contract_number": "LTM/2087/WTR-001",
+            "contract_number": "LTM/2074/WTR-001",
             "contract_amount": 5500000.00,
         },
         "signatures": {
@@ -72,10 +72,10 @@ mock_projects = [
         ],
     },
     {
-        "id": "PRJ-2087-002",
-        "fiscal_year": "2086/87",
+        "id": "PRJ-2075-002",
+        "fiscal_year": "2075/76",
         "ministry": "Ministry of Health",
-        "budget_subtitle": "2085/86-14-03",
+        "budget_subtitle": "2074/75-14-03",
         "procurement_plan": {
             "sl_no": 2,
             "project_type": "Estimated",
@@ -100,7 +100,7 @@ mock_projects = [
             "date_of_initiation": "25-10-2025",
             "date_of_completion": "25-04-2026",
             "contractor_name": "Nepal Infrastructure Ltd.",
-            "contract_number": "MOH/2087/HLTH-002",
+            "contract_number": "MOH/2075/HLTH-002",
             "contract_amount": 18500000.00,
         },
         "signatures": {
@@ -139,10 +139,10 @@ mock_projects = [
         ],
     },
     {
-        "id": "PRJ-2087-003",
-        "fiscal_year": "2086/87",
+        "id": "PRJ-2076-003",
+        "fiscal_year": "2076/77",
         "ministry": "Ministry of Education",
-        "budget_subtitle": "2086/87-32-08",
+        "budget_subtitle": "2076/77-32-08",
         "procurement_plan": {
             "sl_no": 3,
             "project_type": "Estimated",
@@ -167,7 +167,7 @@ mock_projects = [
             "date_of_initiation": "15-09-2025",
             "date_of_completion": "15-03-2026",
             "contractor_name": "Everest Builders Pvt. Ltd.",
-            "contract_number": "MOE/2087/EDU-003",
+            "contract_number": "MOE/2076/EDU-003",
             "contract_amount": 12000000.00,
         },
         "signatures": {
@@ -206,10 +206,10 @@ mock_projects = [
         ],
     },
     {
-        "id": "PRJ-2087-004",
-        "fiscal_year": "2086/87",
+        "id": "PRJ-2077-004",
+        "fiscal_year": "2077/78",
         "ministry": "Ministry of Physical Infrastructure",
-        "budget_subtitle": "2086/87-45-12",
+        "budget_subtitle": "2077/78-45-12",
         "procurement_plan": {
             "sl_no": 4,
             "project_type": "Estimated",
@@ -234,7 +234,7 @@ mock_projects = [
             "date_of_initiation": "10-09-2025",
             "date_of_completion": "10-06-2026",
             "contractor_name": "China Road & Bridge Corporation",
-            "contract_number": "MOPI/2087/RD-004",
+            "contract_number": "MOPI/2077/RD-004",
             "contract_amount": 450000000.00,
         },
         "signatures": {
@@ -281,10 +281,10 @@ mock_projects = [
         ],
     },
     {
-        "id": "PRJ-2087-005",
-        "fiscal_year": "2086/87",
+        "id": "PRJ-2078-005",
+        "fiscal_year": "2078/79",
         "ministry": "Ministry of Agriculture",
-        "budget_subtitle": "2086/87-18-06",
+        "budget_subtitle": "2078/79-18-06",
         "procurement_plan": {
             "sl_no": 5,
             "project_type": "Estimated",
@@ -309,7 +309,7 @@ mock_projects = [
             "date_of_initiation": "25-11-2025",
             "date_of_completion": "25-05-2026",
             "contractor_name": "Terai Construction Company",
-            "contract_number": "MOA/2087/IRR-005",
+            "contract_number": "MOA/2078/IRR-005",
             "contract_amount": 8500000.00,
         },
         "signatures": {
@@ -339,10 +339,10 @@ mock_projects = [
         "citizen_reports": [],
     },
     {
-        "id": "PRJ-2087-006",
-        "fiscal_year": "2086/87",
+        "id": "PRJ-2079-006",
+        "fiscal_year": "2079/80",
         "ministry": "Ministry of Health",
-        "budget_subtitle": "2086/87-14-15",
+        "budget_subtitle": "2079/80-14-15",
         "procurement_plan": {
             "sl_no": 6,
             "project_type": "Estimated",
@@ -367,7 +367,7 @@ mock_projects = [
             "date_of_initiation": "20-08-2025",
             "date_of_completion": "20-11-2025",
             "contractor_name": "MedTech International Pvt. Ltd.",
-            "contract_number": "MOH/2087/EQP-006",
+            "contract_number": "MOH/2079/EQP-006",
             "contract_amount": 25000000.00,
         },
         "signatures": {
