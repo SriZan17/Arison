@@ -12,7 +12,6 @@ export interface ChatMessage {
 
 export interface IMaanResponse {
   response: string;
-  sources?: Array<{ source: string; page: number }>;
   transcription?: string;
 }
 
@@ -65,8 +64,7 @@ class IMaanApiService {
           .pop();
 
         return {
-          response: assistantMessage?.content || 'माफ गर्नुहोस्, मैले तपाईंको प्रश्न बुझिन।',
-          sources: response.data.sources || []
+          response: assistantMessage?.content || 'माफ गर्नुहोस्, मैले तपाईंको प्रश्न बुझिन।'
         };
       } else {
         throw new Error('Invalid response format from server');
@@ -125,8 +123,7 @@ class IMaanApiService {
         // Return a helpful response instead of throwing an error
         return {
           response: 'माफ गर्नुहोस्, म तपाईंको आवाज सुन्न सकिन। कृपया स्पष्ट रूपमा बोल्नुहोस् र पुनः प्रयास गर्नुहोस्।',
-          transcription: 'आवाज स्पष्ट सुनिएन',
-          sources: []
+          transcription: 'आवाज स्पष्ट सुनिएन'
         };
       }
       
@@ -146,8 +143,7 @@ class IMaanApiService {
       // Return a helpful error response instead of throwing
       return {
         response: 'माफ गर्नुहोस्, आवाज प्रक्रियामा समस्या भयो। कृपया पुनः प्रयास गर्नुहोस् वा टेक्स्ट प्रयोग गर्नुहोस्।',
-        transcription: 'आवाज प्रक्रिया त्रुटि',
-        sources: []
+        transcription: 'आवाज प्रक्रिया त्रुटि'
       };
     }
   }

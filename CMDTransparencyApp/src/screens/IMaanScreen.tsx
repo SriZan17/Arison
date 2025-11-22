@@ -39,7 +39,6 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  sources?: Array<{ source: string; page: number }>;
 }
 
 const IMaanScreen: React.FC = () => {
@@ -134,7 +133,6 @@ const IMaanScreen: React.FC = () => {
         role: 'assistant',
         content: response.response,
         timestamp: new Date(),
-        sources: response.sources,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -301,17 +299,6 @@ const IMaanScreen: React.FC = () => {
                     color={isSpeaking ? theme.colors.textSecondary : theme.colors.primary} 
                   />
                 </TouchableOpacity>
-              )}
-
-              {message.sources && message.sources.length > 0 && (
-                <View style={styles.sourcesContainer}>
-                  <Text style={styles.sourcesTitle}>स्रोतहरू:</Text>
-                  {message.sources.map((source, index) => (
-                    <Text key={index} style={styles.sourceText}>
-                      • {source.source} (पृष्ठ {source.page})
-                    </Text>
-                  ))}
-                </View>
               )}
             </View>
           </View>
@@ -582,23 +569,6 @@ const styles = StyleSheet.create({
   },
   assistantMessageText: {
     color: theme.colors.text,
-  },
-  sourcesContainer: {
-    marginTop: theme.spacing.sm,
-    paddingTop: theme.spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  sourcesTitle: {
-    fontSize: theme.typography.caption.fontSize,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-  },
-  sourceText: {
-    fontSize: theme.typography.caption.fontSize - 1,
-    color: theme.colors.textSecondary,
-    lineHeight: 16,
   },
   loadingContainer: {
     alignItems: 'center',
