@@ -4,11 +4,13 @@ from fastapi.staticfiles import StaticFiles
 from app.routers import projects, reviews, auth
 from app.database.config import connect_db, disconnect_db
 from pathlib import Path
+from typing import Dict, List, Any
 import os
 import json
 import torch
 import openai
-import torch
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -73,9 +75,12 @@ def get_rag_retriever():
     device = resolve_device()
     print(f"Embedding model device: {device}")
 
-    embedding = OpenAIEmbeddings(
-        model="text-embedding-3-small", api_key=get_openai_api_key()
-    )
+    # Get and set OpenAI API key before creating embeddings
+    openai_api_key = get_openai_api_key()
+    os.environ["OPENAI_API_KEY"] = openai_api_key
+
+    # Create OpenAI embeddings
+    embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
     rag_vectorstore = Chroma(
         persist_directory=RAG_PERSIST_DIR,
@@ -187,6 +192,38 @@ async def root():
 @app.post("/chatbot")
 async def rag_chatbot_endpoint(request: Request):
     """
+    RAG-enabled chatbot with timeout handling.
+
+    Request JSON:
+      {
+        "messages": [
+          {"role": "user", "content": "..."}, ...
+        ]
+      }
+
+    Response JSON:
+      {
+        "messages": [..., {"role": "assistant", "content": "..."}],
+        "sources": [
+          {"source": "file.pdf", "page": 3},
+          ...
+        ]
+      }
+    """
+    try:
+        # Add overall request timeout
+        return await asyncio.wait_for(
+            _process_chatbot_request(request), timeout=45.0  # 45 second total timeout
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=408,
+            detail="Request timeout. The AI assistant is taking too long to respond. Please try again with a shorter message.",
+        )
+
+
+async def _process_chatbot_request(request: Request):
+    """
     RAG-enabled chatbot.
 
     Request JSON:
@@ -268,31 +305,67 @@ async def rag_chatbot_endpoint(request: Request):
         "- Answer using the language of the user content (English or Nepali).\n"
         "- Prefer bullet points and short steps instead of long paragraphs.\n"
         "- Mention, where possible, which law, rule, or type of official document your answer is based on.\n"
+        "- Answer must be consise and when used with tts , it must answer under 1 minutes"
         "Below is the context you can use:\n\n"
         "CONTEXT:\n"
         f"{context_text}\n\n"
     )
 
     # Compose final messages: system + existing conversation
-    full_messages = [
-        {"role": "system", "content": system_prompt},
-    ] + messages
+    # Build messages list with proper typing
+    formatted_messages = [{"role": "system", "content": system_prompt}]
 
-    # 3) Call OpenAI directly (no helper)
+    # Add existing messages
+    for msg in messages:
+        if isinstance(msg, dict) and msg.get("role") and msg.get("content"):
+            formatted_messages.append(
+                {"role": msg["role"], "content": str(msg["content"])}
+            )
+
+    # 3) Call OpenAI directly with timeout handling
     api_key = get_openai_api_key()
-    client = openai.OpenAI(api_key=api_key)
+    client = openai.OpenAI(api_key=api_key, timeout=30.0)  # 30 second timeout
 
     try:
+        # Type ignore for OpenAI message format compatibility
         resp = client.chat.completions.create(
-            model="gpt-5-mini-2025-08-07",
-            messages=full_messages,
+            model="gpt-4o-mini",  # Fixed model name
+            messages=formatted_messages,  # type: ignore
+            max_tokens=1500,  # Limit response length
+            temperature=0.7,
             top_p=1,
             presence_penalty=0,
             frequency_penalty=0,
         )
         reply = resp.choices[0].message.content
+    except openai.APITimeoutError as e:
+        raise HTTPException(
+            status_code=408,
+            detail="Request timeout. AI service took too long to respond. Please try again.",
+        )
+    except openai.RateLimitError as e:
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Please wait a moment before trying again.",
+        )
+    except openai.APIConnectionError as e:
+        raise HTTPException(
+            status_code=503,
+            detail="Connection error with AI service. Please try again.",
+        )
+    except openai.AuthenticationError as e:
+        raise HTTPException(
+            status_code=500, detail="API authentication failed. Please contact support."
+        )
     except openai.OpenAIError as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI API error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI service error: {str(e)[:100]}...",  # Truncate long errors
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail="Unexpected error occurred. Please try again."
+        )
 
     # Append the assistant's reply to the conversation
     messages.append({"role": "assistant", "content": reply})
@@ -307,7 +380,13 @@ async def rag_chatbot_endpoint(request: Request):
             }
         )
 
-    return JSONResponse({"messages": messages})
+    return JSONResponse(
+        {
+            "response": reply,  # For compatibility with existing client
+            "messages": messages,
+            "sources": sources,
+        }
+    )
 
 
 @app.get("/health")

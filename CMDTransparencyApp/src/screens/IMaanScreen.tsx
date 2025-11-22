@@ -9,15 +9,26 @@ import {
   Alert,
   Dimensions,
   TextInput,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Markdown from 'react-native-markdown-display';
 
 // Components
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import VoiceRecordButton from '../components/common/VoiceRecordButton';
 
 // Services
 import { imaanApi } from '../services/imaanService';
+import { speechToText } from '../services/speechService';
+import { initializeWhisperService } from '../services/whisperService';
+
+// Hooks
+import { useVoiceRecording } from '../hooks/useVoiceRecording';
+
+// Config
+import config from '../config/appConfig';
 
 // Types and Theme
 import { theme } from '../styles/theme';
@@ -29,17 +40,26 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  sources?: Array<{ source: string; page: number }>;
 }
 
 const IMaanScreen: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [inputText, setInputText] = useState('');
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       role: 'assistant',
-      content: 'नमस्ते! म i-maan हुँ। म तपाईंलाई सरकारी परियोजनाहरू र पारदर्शिताका बारेमा जानकारी दिन सक्छु। के तपाईंसँग कुनै प्रश्न छ?',
+      content: `**नमस्ते!** म *e-maan* हुँ। 
+
+म तपाईंलाई सरकारी परियोजनाहरू र पारदर्शिताका बारेमा जानकारी दिन सक्छु।
+
+### मैले के गर्न सक्छु:
+- **परियोजना जानकारी** प्रदान गर्न
+- **सरकारी नीतिहरू** बारे बताउन  
+- **पारदर्शिता** मुद्दाहरूमा सहायता गर्न
+
+> के तपाईंसँग कुनै प्रश्न छ?`,
       timestamp: new Date(),
     }
   ]);
@@ -47,12 +67,71 @@ const IMaanScreen: React.FC = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const textInputRef = useRef<TextInput>(null);
 
+  // Function to strip Markdown formatting for TTS
+  const stripMarkdown = (text: string): string => {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold **text**
+      .replace(/\*(.*?)\*/g, '$1')     // Remove italic *text*
+      .replace(/#{1,6}\s/g, '')        // Remove headers # ## ###
+      .replace(/`([^`]+)`/g, '$1')     // Remove inline code `code`
+      .replace(/```[\s\S]*?```/g, '')  // Remove code blocks
+      .replace(/^>\s/gm, '')          // Remove blockquotes >
+      .replace(/^-\s/gm, '')          // Remove list items -
+      .replace(/^\*\s/gm, '')         // Remove list items *
+      .replace(/^\+\s/gm, '')         // Remove list items +
+      .replace(/^\d+\.\s/gm, '')     // Remove numbered lists 1.
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links [text](url)
+      .replace(/\n{2,}/g, '\n')       // Replace multiple newlines with single
+      .trim();
+  };
+
+  // Voice recording hook with Whisper transcription
+  const {
+    isRecording,
+    isTranscribing,
+    recognizedText,
+    audioUri,
+    recordingAnimation,
+    toggleRecording,
+    clearRecording,
+  } = useVoiceRecording((text: string) => {
+    setInputText(text);
+  });
+
+  useEffect(() => {
+    // Initialize Whisper service
+    try {
+      initializeWhisperService(config.openai.apiKey);
+    } catch (error) {
+      console.error('Failed to initialize Whisper service:', error);
+    }
+  }, []);
+
   useEffect(() => {
     // Auto-scroll to bottom when new messages are added
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
+  useEffect(() => {
+    // Test API connectivity on component mount
+    testAPIConnection();
+  }, []);
 
+  const testAPIConnection = async () => {
+    try {
+      console.log('🔍 Testing API connectivity...');
+      const isHealthy = await imaanApi.healthCheck();
+      console.log('🏥 API Health Status:', isHealthy ? 'Connected ✅' : 'Disconnected ❌');
+      
+      if (!isHealthy) {
+        console.warn('⚠️ Backend server may not be running or accessible');
+        console.warn('🌐 Expected server URL: http://192.168.88.191:8000');
+        console.warn('💡 Please check if the backend server is running on the correct port');
+      }
+    } catch (error) {
+      console.error('❌ API connectivity test failed:', error);
+    }
+  };
 
   const sendTextMessage = async (text?: string) => {
     const messageText = text || inputText.trim();
@@ -61,6 +140,7 @@ const IMaanScreen: React.FC = () => {
     try {
       setIsSending(true);
       setInputText(''); // Clear input
+      clearRecording(); // Clear voice recording
 
       // Add user message
       const userMessage: ChatMessage = {
@@ -81,15 +161,101 @@ const IMaanScreen: React.FC = () => {
         role: 'assistant',
         content: response.response,
         timestamp: new Date(),
-        sources: response.sources,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      
+      // Automatically speak the AI response (strip Markdown)
+      await speakMessage(stripMarkdown(response.response));
     } catch (error) {
       console.error('Error sending text message:', error);
-      Alert.alert('Error', 'Failed to send message. Please try again.');
+      
+      let errorMessage = 'सन्देश पठाउन असफल। कृपया पुनः प्रयास गर्नुहोस्।';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('timeout') || error.message.includes('ECONNABORTED')) {
+          errorMessage = 'समय सकियो। AI ले जवाफ दिन लामो समय लगायो। कृपया छोटो प्रश्न सोध्नुहोस् र पुनः प्रयास गर्नुहोस्।';
+        } else if (error.message.includes('Network Error') || error.message.includes('ECONNREFUSED')) {
+          errorMessage = 'इन्टरनेट जडान जाँच गर्नुहोस् र पुनः प्रयास गर्नुहोस्।';
+        } else if (error.message.includes('500')) {
+          errorMessage = 'सर्भरमा समस्या छ। कृपया केही समयपछि प्रयास गर्नुहोस्।';
+        }
+      }
+      
+      Alert.alert(
+        'त्रुटि',
+        errorMessage,
+        [
+          { text: 'पुनः प्रयास', onPress: () => sendTextMessage(messageText) },
+          { text: 'जडान जाँच', onPress: testAPIConnection },
+          { text: 'रद्द गर्नुहोस्', style: 'cancel' }
+        ]
+      );
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const speakMessage = async (text: string) => {
+    try {
+      // Stop any current speech first
+      if (isSpeaking) {
+        await stopSpeaking();
+        // Small delay to ensure stop is processed
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      
+      console.log('🔊 Starting TTS for:', text.substring(0, 50) + '...');
+      
+      const result = await speechToText.speakText(text, 'ne-NP', {
+        onStart: () => {
+          setIsSpeaking(true);
+          console.log('🔴 TTS started - Button should be RED now');
+        },
+        onEnd: () => {
+          setIsSpeaking(false);
+          console.log('🔵 TTS ended - Button should be BLUE now');
+        },
+        onError: (error) => {
+          setIsSpeaking(false);
+          console.error('❌ TTS error:', error);
+          Alert.alert('TTS त्रुटि', 'आवाज बजाउन सकिएन।');
+        }
+      });
+      
+      if (!result.success) {
+        console.warn('TTS failed:', result.error);
+        setIsSpeaking(false);
+        Alert.alert('TTS त्रुटि', 'आवाज बजाउन सकिएन। कृपया पुनः प्रयास गर्नुहोस्।');
+      }
+    } catch (error) {
+      console.error('Error speaking message:', error);
+      setIsSpeaking(false);
+      Alert.alert('TTS त्रुटि', 'आवाज बजाउन सकिएन।');
+    }
+  };
+
+  const stopSpeaking = async () => {
+    try {
+      console.log('🔇 Stopping TTS...');
+      setIsSpeaking(false);
+      
+      // Stop TTS directly using platform-specific methods
+      if (Platform.OS === 'web') {
+        if (window.speechSynthesis && window.speechSynthesis.speaking) {
+          window.speechSynthesis.cancel();
+          console.log('✅ Web TTS stopped');
+        }
+      } else {
+        // For React Native, we'll import Speech dynamically
+        const Speech = require('expo-speech');
+        await Speech.stop();
+        console.log('✅ Native TTS stopped');
+      }
+    } catch (error) {
+      console.error('Error stopping speech:', error);
+      // Ensure state is reset even if stopping fails
+      setIsSpeaking(false);
     }
   };
 
@@ -114,16 +280,30 @@ const IMaanScreen: React.FC = () => {
             <View style={styles.statusIndicator} />
           </View>
           <View style={styles.headerText}>
-            <Text style={styles.title}>i-maan</Text>
+            <Text style={styles.title}>e-maan</Text>
             <Text style={styles.subtitle}>AI असिस्टेन्ट • सरकारी पारदर्शिता</Text>
           </View>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity 
             style={styles.infoButton}
-            onPress={() => Alert.alert('i-maan', 'AI असिस्टेन्ट सरकारी पारदर्शिताको लागि')}
+            onPress={() => Alert.alert('e-maan', 'AI असिस्टेन्ट सरकारी पारदर्शिताको लागि')}
           >
             <Ionicons name="information-circle" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[
+              styles.infoButton, 
+              isSpeaking && styles.speakingButton
+            ]}
+            onPress={isSpeaking ? stopSpeaking : () => {}}
+            disabled={!isSpeaking}
+          >
+            <Ionicons 
+              name={isSpeaking ? "stop" : "volume-medium"} 
+              size={20} 
+              color={isSpeaking ? theme.colors.error : theme.colors.primary} 
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -158,7 +338,7 @@ const IMaanScreen: React.FC = () => {
                   styles.messageRole,
                   message.role === 'user' ? styles.userMessageRole : styles.assistantMessageRole
                 ]}>
-                  {message.role === 'user' ? 'तपाईं' : 'i-maan'}
+                  {message.role === 'user' ? 'तपाईं' : 'e-maan'}
                 </Text>
                 <Text style={[
                   styles.messageTime,
@@ -168,22 +348,97 @@ const IMaanScreen: React.FC = () => {
                 </Text>
               </View>
               
-              <Text style={[
-                styles.messageText,
-                message.role === 'user' ? styles.userMessageText : styles.assistantMessageText
-              ]}>
-                {message.content}
-              </Text>
-
-              {message.sources && message.sources.length > 0 && (
-                <View style={styles.sourcesContainer}>
-                  <Text style={styles.sourcesTitle}>स्रोतहरू:</Text>
-                  {message.sources.map((source, index) => (
-                    <Text key={index} style={styles.sourceText}>
-                      • {source.source} (पृष्ठ {source.page})
-                    </Text>
-                  ))}
-                </View>
+              {message.role === 'assistant' ? (
+                <Markdown 
+                  style={{
+                    body: {
+                      ...styles.messageText,
+                      ...styles.assistantMessageText,
+                    },
+                    paragraph: {
+                      margin: 0,
+                      padding: 0,
+                    },
+                    heading1: {
+                      fontSize: 18,
+                      fontWeight: 'bold',
+                      color: styles.assistantMessageText.color,
+                      marginVertical: 4,
+                    },
+                    heading2: {
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                      color: styles.assistantMessageText.color,
+                      marginVertical: 3,
+                    },
+                    heading3: {
+                      fontSize: 14,
+                      fontWeight: 'bold',
+                      color: styles.assistantMessageText.color,
+                      marginVertical: 2,
+                    },
+                    strong: {
+                      fontWeight: 'bold',
+                      color: styles.assistantMessageText.color,
+                    },
+                    em: {
+                      fontStyle: 'italic',
+                      color: styles.assistantMessageText.color,
+                    },
+                    list_item: {
+                      flexDirection: 'row',
+                      marginVertical: 1,
+                    },
+                    bullet_list_icon: {
+                      marginRight: 5,
+                    },
+                    code_inline: {
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      paddingHorizontal: 4,
+                      paddingVertical: 2,
+                      borderRadius: 3,
+                      fontFamily: 'monospace',
+                      fontSize: theme.typography.caption.fontSize,
+                    },
+                    fence: {
+                      backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                      padding: 8,
+                      borderRadius: 5,
+                      marginVertical: 4,
+                    },
+                    blockquote: {
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                      borderLeftWidth: 3,
+                      borderLeftColor: '#3b82f6',
+                      paddingLeft: 8,
+                      paddingVertical: 4,
+                      marginVertical: 4,
+                    },
+                  }}
+                >
+                  {message.content}
+                </Markdown>
+              ) : (
+                <Text style={[
+                  styles.messageText,
+                  styles.userMessageText
+                ]}>
+                  {message.content}
+                </Text>
+              )}
+              
+              {message.role === 'assistant' && (
+                <TouchableOpacity 
+                  style={styles.speakButton}
+                  onPress={() => speakMessage(stripMarkdown(message.content))}
+                  disabled={isSpeaking}
+                >
+                  <Ionicons 
+                    name="volume-high" 
+                    size={16} 
+                    color={isSpeaking ? theme.colors.textSecondary : theme.colors.primary} 
+                  />
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -200,12 +455,20 @@ const IMaanScreen: React.FC = () => {
       <View style={styles.inputContainer}>
         <View style={styles.inputWrapper}>
           <View style={styles.textInputContainer}>
-            <TouchableOpacity
+            <TouchableOpacity 
               style={styles.helpButton}
               onPress={() => sendTextMessage('मलाई सहयोग चाहिन्छ')}
               disabled={isSending}
             >
               <Ionicons name="help-circle" size={20} color={theme.colors.primary} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.helpButton}
+              onPress={testAPIConnection}
+              disabled={isSending}
+            >
+              <Ionicons name="wifi" size={20} color={theme.colors.success} />
             </TouchableOpacity>
             
             <TextInput
@@ -220,6 +483,16 @@ const IMaanScreen: React.FC = () => {
               editable={!isSending}
               onSubmitEditing={() => sendTextMessage()}
               blurOnSubmit={false}
+            />
+
+            <VoiceRecordButton
+              isRecording={isRecording}
+              isTranscribing={isTranscribing}
+              recordingAnimation={recordingAnimation}
+              onPress={toggleRecording}
+              disabled={isSending}
+              style={styles.voiceButtonStyle}
+              audioUri={audioUri}
             />
 
             <TouchableOpacity
@@ -239,7 +512,11 @@ const IMaanScreen: React.FC = () => {
           </View>
           
           <Text style={styles.helpText}>
-            💬 नेपाली वा अङ्ग्रेजीमा प्रश्न सोध्नुहोस् • ❓ सहयोग माग्नुहोस्
+            💬 नेपाली वा अङ्ग्रेजीमा प्रश्न सोध्नुहोस् • 🎤 आवाज रेकर्ड गर्नुहोस् • ❓ सहयोग माग्नुहोस् • 📡 जडान जाँच गर्नुहोस्
+            {isRecording && '\n🔴 रेकर्डिङ... बोल्नुहोस्'}
+            {isTranscribing && '\n⏳ AI ले तपाईंको आवाज बुझ्दै छ...'}
+            {isSending && '\n🤖 AI ले जवाफ तयार गर्दै छ... (यो केही सेकेन्डदेखि १ मिनेट सम्म लाग्न सक्छ)'}
+            {recognizedText && `\n✓ पहिचान भयो: "${recognizedText.substring(0, 50)}${recognizedText.length > 50 ? '...' : ''}"`}
           </Text>
         </View>
       </View>
@@ -326,6 +603,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.primary,
+    marginLeft: theme.spacing.xs,
+  },
+  speakingButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderColor: theme.colors.error,
+    borderWidth: 2,
+    shadowColor: theme.colors.error,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  speakButton: {
+    position: 'absolute',
+    bottom: theme.spacing.xs,
+    right: theme.spacing.xs,
+    padding: theme.spacing.xs,
+    borderRadius: 12,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
   chatContainer: {
     flex: 1,
@@ -381,6 +677,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderBottomLeftRadius: 8,
+    position: 'relative',
+    paddingRight: theme.spacing.xl,
   },
   messageHeader: {
     marginBottom: theme.spacing.xs,
@@ -417,23 +715,6 @@ const styles = StyleSheet.create({
   },
   assistantMessageText: {
     color: theme.colors.text,
-  },
-  sourcesContainer: {
-    marginTop: theme.spacing.sm,
-    paddingTop: theme.spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  sourcesTitle: {
-    fontSize: theme.typography.caption.fontSize,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-  },
-  sourceText: {
-    fontSize: theme.typography.caption.fontSize - 1,
-    color: theme.colors.textSecondary,
-    lineHeight: 16,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -482,6 +763,9 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     paddingVertical: theme.spacing.xs,
     textAlignVertical: 'center',
+  },
+  voiceButtonStyle: {
+    marginLeft: theme.spacing.sm,
   },
   sendButton: {
     width: 32,
