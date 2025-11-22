@@ -9,18 +9,6 @@ from fastapi.responses import JSONResponse
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 
-# -------------------------------------------------------------------
-# FastAPI setup
-# -------------------------------------------------------------------
-def resolve_device():
-    """Return the best available torch device for embeddings."""
-    try:
-        import torch
-        if torch.cuda.is_available():
-            return "cuda"
-    except Exception:
-        pass
-    return "cpu"
 
 load_dotenv()
 
@@ -65,10 +53,6 @@ def get_rag_retriever():
             status_code=500,
             detail=f"Vector DB not found at {RAG_PERSIST_DIR}. Run your ingestion script first.",
         )
-
-    # Use same embedding model/config as ingestion
-    device = resolve_device()
-    print(f"Embedding model device: {device}")
     
 
     embedding = OpenAIEmbeddings(

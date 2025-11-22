@@ -133,7 +133,7 @@ def main():
         print("No new or updated PDFs. Using existing vector store only.")
 
     embedding = OpenAIEmbeddings(
-        model="text-embedding-3-small",   # or "text-embedding-3-small"
+        model="text-embedding-3-small",
         api_key=get_openai_api_key()
     )
 
