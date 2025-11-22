@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Markdown from 'react-native-markdown-display';
 
 // Components
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -49,7 +50,16 @@ const IMaanScreen: React.FC = () => {
     {
       id: '1',
       role: 'assistant',
-      content: 'नमस्ते! म e-maan हुँ। म तपाईंलाई सरकारी परियोजनाहरू र पारदर्शिताका बारेमा जानकारी दिन सक्छु। के तपाईंसँग कुनै प्रश्न छ?',
+      content: `**नमस्ते!** म *e-maan* हुँ। 
+
+म तपाईंलाई सरकारी परियोजनाहरू र पारदर्शिताका बारेमा जानकारी दिन सक्छु।
+
+### मैले के गर्न सक्छु:
+- **परियोजना जानकारी** प्रदान गर्न
+- **सरकारी नीतिहरू** बारे बताउन  
+- **पारदर्शिता** मुद्दाहरूमा सहायता गर्न
+
+> के तपाईंसँग कुनै प्रश्न छ?`,
       timestamp: new Date(),
     }
   ]);
@@ -280,12 +290,84 @@ const IMaanScreen: React.FC = () => {
                 </Text>
               </View>
               
-              <Text style={[
-                styles.messageText,
-                message.role === 'user' ? styles.userMessageText : styles.assistantMessageText
-              ]}>
-                {message.content}
-              </Text>
+              {message.role === 'assistant' ? (
+                <Markdown 
+                  style={{
+                    body: {
+                      ...styles.messageText,
+                      ...styles.assistantMessageText,
+                    },
+                    paragraph: {
+                      margin: 0,
+                      padding: 0,
+                    },
+                    heading1: {
+                      fontSize: 18,
+                      fontWeight: 'bold',
+                      color: styles.assistantMessageText.color,
+                      marginVertical: 4,
+                    },
+                    heading2: {
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                      color: styles.assistantMessageText.color,
+                      marginVertical: 3,
+                    },
+                    heading3: {
+                      fontSize: 14,
+                      fontWeight: 'bold',
+                      color: styles.assistantMessageText.color,
+                      marginVertical: 2,
+                    },
+                    strong: {
+                      fontWeight: 'bold',
+                      color: styles.assistantMessageText.color,
+                    },
+                    em: {
+                      fontStyle: 'italic',
+                      color: styles.assistantMessageText.color,
+                    },
+                    list_item: {
+                      flexDirection: 'row',
+                      marginVertical: 1,
+                    },
+                    bullet_list_icon: {
+                      marginRight: 5,
+                    },
+                    code_inline: {
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      paddingHorizontal: 4,
+                      paddingVertical: 2,
+                      borderRadius: 3,
+                      fontFamily: 'monospace',
+                      fontSize: theme.typography.caption.fontSize,
+                    },
+                    fence: {
+                      backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                      padding: 8,
+                      borderRadius: 5,
+                      marginVertical: 4,
+                    },
+                    blockquote: {
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                      borderLeftWidth: 3,
+                      borderLeftColor: '#3b82f6',
+                      paddingLeft: 8,
+                      paddingVertical: 4,
+                      marginVertical: 4,
+                    },
+                  }}
+                >
+                  {message.content}
+                </Markdown>
+              ) : (
+                <Text style={[
+                  styles.messageText,
+                  styles.userMessageText
+                ]}>
+                  {message.content}
+                </Text>
+              )}
               
               {message.role === 'assistant' && (
                 <TouchableOpacity 
