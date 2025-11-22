@@ -67,6 +67,24 @@ const IMaanScreen: React.FC = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const textInputRef = useRef<TextInput>(null);
 
+  // Function to strip Markdown formatting for TTS
+  const stripMarkdown = (text: string): string => {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold **text**
+      .replace(/\*(.*?)\*/g, '$1')     // Remove italic *text*
+      .replace(/#{1,6}\s/g, '')        // Remove headers # ## ###
+      .replace(/`([^`]+)`/g, '$1')     // Remove inline code `code`
+      .replace(/```[\s\S]*?```/g, '')  // Remove code blocks
+      .replace(/^>\s/gm, '')          // Remove blockquotes >
+      .replace(/^-\s/gm, '')          // Remove list items -
+      .replace(/^\*\s/gm, '')         // Remove list items *
+      .replace(/^\+\s/gm, '')         // Remove list items +
+      .replace(/^\d+\.\s/gm, '')     // Remove numbered lists 1.
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links [text](url)
+      .replace(/\n{2,}/g, '\n')       // Replace multiple newlines with single
+      .trim();
+  };
+
   // Voice recording hook with Whisper transcription
   const {
     isRecording,
@@ -147,8 +165,8 @@ const IMaanScreen: React.FC = () => {
 
       setMessages(prev => [...prev, assistantMessage]);
       
-      // Automatically speak the AI response
-      await speakMessage(response.response);
+      // Automatically speak the AI response (strip Markdown)
+      await speakMessage(stripMarkdown(response.response));
     } catch (error) {
       console.error('Error sending text message:', error);
       
@@ -372,7 +390,7 @@ const IMaanScreen: React.FC = () => {
               {message.role === 'assistant' && (
                 <TouchableOpacity 
                   style={styles.speakButton}
-                  onPress={() => speakMessage(message.content)}
+                  onPress={() => speakMessage(stripMarkdown(message.content))}
                   disabled={isSpeaking}
                 >
                   <Ionicons 
