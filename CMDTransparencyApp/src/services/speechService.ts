@@ -140,7 +140,15 @@ class SpeechToTextService {
   /**
    * Text-to-Speech using Expo Speech (Native) or Browser API (Web)
    */
-  async speakText(text: string, language: string = 'ne-NP'): Promise<TTSResult> {
+  async speakText(
+    text: string, 
+    language: string = 'ne-NP',
+    callbacks?: {
+      onStart?: () => void;
+      onEnd?: () => void;
+      onError?: (error: string) => void;
+    }
+  ): Promise<TTSResult> {
     try {
       console.log('🔊 ===== TTS START =====');
       console.log('💬 Text to speak:', text);
@@ -159,6 +167,22 @@ class SpeechToTextService {
           language: language,
           pitch: 1.0,
           rate: 1.0,
+          onStart: () => {
+            console.log('🔊 Native TTS started');
+            callbacks?.onStart?.();
+          },
+          onDone: () => {
+            console.log('✅ Native TTS completed');
+            callbacks?.onEnd?.();
+          },
+          onStopped: () => {
+            console.log('🔇 Native TTS stopped');
+            callbacks?.onEnd?.();
+          },
+          onError: (error) => {
+            console.error('❌ Native TTS error:', error);
+            callbacks?.onError?.(error.toString());
+          },
         });
         
         return {
@@ -202,10 +226,12 @@ class SpeechToTextService {
       return new Promise((resolve) => {
         utterance.onstart = () => {
           console.log('🔊 TTS started');
+          callbacks?.onStart?.();
         };
 
         utterance.onend = () => {
           console.log('✅ ===== FREE TTS COMPLETED =====');
+          callbacks?.onEnd?.();
           resolve({
             success: true,
             utterance,
@@ -215,6 +241,7 @@ class SpeechToTextService {
 
         utterance.onerror = (event) => {
           console.error('❌ TTS error:', event.error);
+          callbacks?.onError?.(event.error);
           resolve({
             success: false,
             error: event.error,

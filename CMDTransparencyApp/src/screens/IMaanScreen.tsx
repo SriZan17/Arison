@@ -205,27 +205,33 @@ const IMaanScreen: React.FC = () => {
         await new Promise(resolve => setTimeout(resolve, 200));
       }
       
-      setIsSpeaking(true);
       console.log('🔊 Starting TTS for:', text.substring(0, 50) + '...');
       
-      const result = await speechToText.speakText(text, 'ne-NP');
+      const result = await speechToText.speakText(text, 'ne-NP', {
+        onStart: () => {
+          setIsSpeaking(true);
+          console.log('🔴 TTS started - Button should be RED now');
+        },
+        onEnd: () => {
+          setIsSpeaking(false);
+          console.log('🔵 TTS ended - Button should be BLUE now');
+        },
+        onError: (error) => {
+          setIsSpeaking(false);
+          console.error('❌ TTS error:', error);
+          Alert.alert('TTS त्रुटि', 'आवाज बजाउन सकिएन।');
+        }
+      });
       
       if (!result.success) {
         console.warn('TTS failed:', result.error);
+        setIsSpeaking(false);
         Alert.alert('TTS त्रुटि', 'आवाज बजाउन सकिएन। कृपया पुनः प्रयास गर्नुहोस्।');
-      } else {
-        console.log('✅ TTS completed successfully');
       }
     } catch (error) {
       console.error('Error speaking message:', error);
+      setIsSpeaking(false);
       Alert.alert('TTS त्रुटि', 'आवाज बजाउन सकिएन।');
-    } finally {
-      // Set a timeout to ensure isSpeaking is reset
-      // This handles cases where the TTS doesn't properly trigger onend
-      setTimeout(() => {
-        setIsSpeaking(false);
-        console.log('🔇 TTS state reset');
-      }, 100);
     }
   };
 
@@ -286,11 +292,15 @@ const IMaanScreen: React.FC = () => {
             <Ionicons name="information-circle" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.infoButton, isSpeaking && styles.speakingButton]}
+            style={[
+              styles.infoButton, 
+              isSpeaking && styles.speakingButton
+            ]}
             onPress={isSpeaking ? stopSpeaking : () => {}}
+            disabled={!isSpeaking}
           >
             <Ionicons 
-              name={isSpeaking ? "volume-high" : "volume-medium"} 
+              name={isSpeaking ? "stop" : "volume-medium"} 
               size={20} 
               color={isSpeaking ? theme.colors.error : theme.colors.primary} 
             />
@@ -596,8 +606,14 @@ const styles = StyleSheet.create({
     marginLeft: theme.spacing.xs,
   },
   speakingButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
     borderColor: theme.colors.error,
+    borderWidth: 2,
+    shadowColor: theme.colors.error,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   speakButton: {
     position: 'absolute',
