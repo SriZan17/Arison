@@ -676,6 +676,28 @@ class SpeechToTextService {
   }
 
   /**
+   * Stop ongoing TTS speech
+   */
+  async stopSpeaking(): Promise<void> {
+    try {
+      console.log('🔇 Stopping TTS...');
+      
+      if (Platform.OS === 'web') {
+        if (window.speechSynthesis && window.speechSynthesis.speaking) {
+          window.speechSynthesis.cancel();
+          console.log('✅ Web TTS stopped');
+        }
+      } else {
+        await Speech.stop();
+        console.log('✅ Native TTS stopped');
+      }
+    } catch (error) {
+      console.error('❌ Error stopping TTS:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Check if currently recording
    */
   getIsRecording(): boolean {

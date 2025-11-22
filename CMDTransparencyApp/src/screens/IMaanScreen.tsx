@@ -198,28 +198,58 @@ const IMaanScreen: React.FC = () => {
 
   const speakMessage = async (text: string) => {
     try {
+      // Stop any current speech first
+      if (isSpeaking) {
+        await stopSpeaking();
+        // Small delay to ensure stop is processed
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      
       setIsSpeaking(true);
+      console.log('🔊 Starting TTS for:', text.substring(0, 50) + '...');
+      
       const result = await speechToText.speakText(text, 'ne-NP');
+      
       if (!result.success) {
         console.warn('TTS failed:', result.error);
+        Alert.alert('TTS त्रुटि', 'आवाज बजाउन सकिएन। कृपया पुनः प्रयास गर्नुहोस्।');
+      } else {
+        console.log('✅ TTS completed successfully');
       }
     } catch (error) {
       console.error('Error speaking message:', error);
+      Alert.alert('TTS त्रुटि', 'आवाज बजाउन सकिएन।');
     } finally {
-      setIsSpeaking(false);
+      // Set a timeout to ensure isSpeaking is reset
+      // This handles cases where the TTS doesn't properly trigger onend
+      setTimeout(() => {
+        setIsSpeaking(false);
+        console.log('🔇 TTS state reset');
+      }, 100);
     }
   };
 
   const stopSpeaking = async () => {
     try {
+      console.log('🔇 Stopping TTS...');
       setIsSpeaking(false);
-      if (speechToText.isTTSAvailable()) {
-        if (Platform.OS === 'web') {
+      
+      // Stop TTS directly using platform-specific methods
+      if (Platform.OS === 'web') {
+        if (window.speechSynthesis && window.speechSynthesis.speaking) {
           window.speechSynthesis.cancel();
+          console.log('✅ Web TTS stopped');
         }
+      } else {
+        // For React Native, we'll import Speech dynamically
+        const Speech = require('expo-speech');
+        await Speech.stop();
+        console.log('✅ Native TTS stopped');
       }
     } catch (error) {
       console.error('Error stopping speech:', error);
+      // Ensure state is reset even if stopping fails
+      setIsSpeaking(false);
     }
   };
 

@@ -305,6 +305,7 @@ async def _process_chatbot_request(request: Request):
         "- Answer using the language of the user content (English or Nepali).\n"
         "- Prefer bullet points and short steps instead of long paragraphs.\n"
         "- Mention, where possible, which law, rule, or type of official document your answer is based on.\n"
+        "- Answer must be consise and when used with tts , it must answer under 1 minutes"
         "Below is the context you can use:\n\n"
         "CONTEXT:\n"
         f"{context_text}\n\n"
