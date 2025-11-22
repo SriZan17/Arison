@@ -1,5 +1,6 @@
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
+import * as Speech from 'expo-speech';
 import { Platform } from 'react-native';
 import { defaultSpeechConfig, SpeechConfig, speechProviders, freeTTSConfig } from '../config/speechConfig';
 
@@ -137,25 +138,40 @@ class SpeechToTextService {
   }
 
   /**
-   * FREE Text-to-Speech using browser Speech Synthesis API
+   * Text-to-Speech using Expo Speech (Native) or Browser API (Web)
    */
   async speakText(text: string, language: string = 'ne-NP'): Promise<TTSResult> {
     try {
+      console.log('🔊 ===== TTS START =====');
+      console.log('💬 Text to speak:', text);
+      console.log('🌐 Language:', language);
+
+      // Stop any ongoing speech
+      if (Platform.OS === 'web') {
+        window.speechSynthesis.cancel();
+      } else {
+        await Speech.stop();
+      }
+
       if (Platform.OS !== 'web') {
-        throw new Error('Browser TTS only available on web platform');
+        // Native implementation using expo-speech
+        Speech.speak(text, {
+          language: language,
+          pitch: 1.0,
+          rate: 1.0,
+        });
+        
+        return {
+          success: true,
+          provider: 'expo-speech'
+        };
       }
 
       if (!('speechSynthesis' in window)) {
         throw new Error('Speech Synthesis not supported in this browser');
       }
 
-      console.log('🔊 ===== FREE TTS START =====');
-      console.log('💬 Text to speak:', text);
-      console.log('🌐 Language:', language);
       console.log('💸 Cost: FREE (Browser API)');
-
-      // Stop any ongoing speech
-      window.speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(text);
       

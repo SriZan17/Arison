@@ -9,6 +9,7 @@ import {
   Alert,
   Dimensions,
   TextInput,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,7 @@ import VoiceRecordButton from '../components/common/VoiceRecordButton';
 
 // Services
 import { imaanApi } from '../services/imaanService';
+import { speechToText } from '../services/speechService';
 import { initializeWhisperService } from '../services/whisperService';
 
 // Hooks
@@ -43,6 +45,7 @@ interface ChatMessage {
 const IMaanScreen: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [inputText, setInputText] = useState('');
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -82,6 +85,27 @@ const IMaanScreen: React.FC = () => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
+  useEffect(() => {
+    // Test API connectivity on component mount
+    testAPIConnection();
+  }, []);
+
+  const testAPIConnection = async () => {
+    try {
+      console.log('🔍 Testing API connectivity...');
+      const isHealthy = await imaanApi.healthCheck();
+      console.log('🏥 API Health Status:', isHealthy ? 'Connected ✅' : 'Disconnected ❌');
+      
+      if (!isHealthy) {
+        console.warn('⚠️ Backend server may not be running or accessible');
+        console.warn('🌐 Expected server URL: http://192.168.88.191:8000');
+        console.warn('💡 Please check if the backend server is running on the correct port');
+      }
+    } catch (error) {
+      console.error('❌ API connectivity test failed:', error);
+    }
+  };
+
   const sendTextMessage = async (text?: string) => {
     const messageText = text || inputText.trim();
     if (!messageText) return;
@@ -114,6 +138,9 @@ const IMaanScreen: React.FC = () => {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      
+      // Automatically speak the AI response
+      await speakMessage(response.response);
     } catch (error) {
       console.error('Error sending text message:', error);
       
@@ -134,11 +161,39 @@ const IMaanScreen: React.FC = () => {
         errorMessage,
         [
           { text: 'पुनः प्रयास', onPress: () => sendTextMessage(messageText) },
+          { text: 'जडान जाँच', onPress: testAPIConnection },
           { text: 'रद्द गर्नुहोस्', style: 'cancel' }
         ]
       );
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const speakMessage = async (text: string) => {
+    try {
+      setIsSpeaking(true);
+      const result = await speechToText.speakText(text, 'ne-NP');
+      if (!result.success) {
+        console.warn('TTS failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Error speaking message:', error);
+    } finally {
+      setIsSpeaking(false);
+    }
+  };
+
+  const stopSpeaking = async () => {
+    try {
+      setIsSpeaking(false);
+      if (speechToText.isTTSAvailable()) {
+        if (Platform.OS === 'web') {
+          window.speechSynthesis.cancel();
+        }
+      }
+    } catch (error) {
+      console.error('Error stopping speech:', error);
     }
   };
 
@@ -173,6 +228,16 @@ const IMaanScreen: React.FC = () => {
             onPress={() => Alert.alert('e-maan', 'AI असिस्टेन्ट सरकारी पारदर्शिताको लागि')}
           >
             <Ionicons name="information-circle" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.infoButton, isSpeaking && styles.speakingButton]}
+            onPress={isSpeaking ? stopSpeaking : () => {}}
+          >
+            <Ionicons 
+              name={isSpeaking ? "volume-high" : "volume-medium"} 
+              size={20} 
+              color={isSpeaking ? theme.colors.error : theme.colors.primary} 
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -223,6 +288,20 @@ const IMaanScreen: React.FC = () => {
               ]}>
                 {message.content}
               </Text>
+              
+              {message.role === 'assistant' && (
+                <TouchableOpacity 
+                  style={styles.speakButton}
+                  onPress={() => speakMessage(message.content)}
+                  disabled={isSpeaking}
+                >
+                  <Ionicons 
+                    name="volume-high" 
+                    size={16} 
+                    color={isSpeaking ? theme.colors.textSecondary : theme.colors.primary} 
+                  />
+                </TouchableOpacity>
+              )}
 
               {message.sources && message.sources.length > 0 && (
                 <View style={styles.sourcesContainer}>
@@ -249,12 +328,20 @@ const IMaanScreen: React.FC = () => {
       <View style={styles.inputContainer}>
         <View style={styles.inputWrapper}>
           <View style={styles.textInputContainer}>
-            <TouchableOpacity
+            <TouchableOpacity 
               style={styles.helpButton}
               onPress={() => sendTextMessage('मलाई सहयोग चाहिन्छ')}
               disabled={isSending}
             >
               <Ionicons name="help-circle" size={20} color={theme.colors.primary} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.helpButton}
+              onPress={testAPIConnection}
+              disabled={isSending}
+            >
+              <Ionicons name="wifi" size={20} color={theme.colors.success} />
             </TouchableOpacity>
             
             <TextInput
@@ -298,7 +385,7 @@ const IMaanScreen: React.FC = () => {
           </View>
           
           <Text style={styles.helpText}>
-            💬 नेपाली वा अङ्ग्रेजीमा प्रश्न सोध्नुहोस् • 🎤 आवाज रेकर्ड गर्नुहोस् • ❓ सहयोग माग्नुहोस्
+            💬 नेपाली वा अङ्ग्रेजीमा प्रश्न सोध्नुहोस् • 🎤 आवाज रेकर्ड गर्नुहोस् • ❓ सहयोग माग्नुहोस् • 📡 जडान जाँच गर्नुहोस्
             {isRecording && '\n🔴 रेकर्डिङ... बोल्नुहोस्'}
             {isTranscribing && '\n⏳ AI ले तपाईंको आवाज बुझ्दै छ...'}
             {isSending && '\n🤖 AI ले जवाफ तयार गर्दै छ... (यो केही सेकेन्डदेखि १ मिनेट सम्म लाग्न सक्छ)'}
@@ -389,6 +476,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.primary,
+    marginLeft: theme.spacing.xs,
+  },
+  speakingButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: theme.colors.error,
+  },
+  speakButton: {
+    position: 'absolute',
+    bottom: theme.spacing.xs,
+    right: theme.spacing.xs,
+    padding: theme.spacing.xs,
+    borderRadius: 12,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
   chatContainer: {
     flex: 1,
@@ -444,6 +544,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderBottomLeftRadius: 8,
+    position: 'relative',
+    paddingRight: theme.spacing.xl,
   },
   messageHeader: {
     marginBottom: theme.spacing.xs,
