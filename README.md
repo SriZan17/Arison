@@ -84,4 +84,9 @@ Contributions are welcome! Please see the individual `README.md` files in each d
 
 ## 📄 License
 
-[MIT License](LICENSE)
+## 📄 License
+
+**Proprietary Software**. Copyright (c) 2025 Arison. All rights reserved.
+
+Use of this software is governed by the [End User License Agreement (EULA)](EULA.md).
+Unauthorized copying, modification, or distribution is strictly prohibited.
